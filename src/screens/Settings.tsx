@@ -3,6 +3,7 @@ import { lang, t, type Lang } from '../i18n'
 import { saveLang, saveTmdbToken, tmdbToken } from '../settings'
 import { checkToken, TmdbError } from '../api/tmdb'
 import { Screen } from '../components/Screen'
+import { BackupSettings } from '../components/BackupSettings'
 
 type CheckState = { kind: 'idle' } | { kind: 'busy' } | { kind: 'ok' } | { kind: 'saved' } | { kind: 'error'; message: string }
 
@@ -69,6 +70,8 @@ export function Settings() {
         {check.kind === 'error' && <p class="status error">{check.message}</p>}
       </div>
       <p class="group-footer">{t('settings.tmdbTokenHint')}</p>
+
+      <BackupSettings />
 
       <div class="attribution">
         <img src={`${import.meta.env.BASE_URL}tmdb-logo.svg`} alt="TMDB" width={96} height={96} />

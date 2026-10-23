@@ -103,5 +103,39 @@
     "watched": "Watched",
     "rate": "Your rating?",
     "cancel": "Cancel"
+  },
+  "backup": {
+    "title": "GitHub backup",
+    "owner": "Owner (GitHub login)",
+    "repo": "Repository",
+    "token": "Token",
+    "tokenHint": "Fine-grained token for this repo only, with Contents: Read and write. Stored on this device only and never included in the backup.",
+    "save": "Save",
+    "check": "Test connection",
+    "backupNow": "Back up now",
+    "restore": "Restore from GitHub",
+    "checking": "Checking…",
+    "running": "Saving…",
+    "connected": "Connection works",
+    "last": "Last backup: {date}",
+    "never": "No backup yet",
+    "unsaved": "Unsaved changes",
+    "notConfigured": "Backup is not set up",
+    "restoreFound": "The backup has {n}. How to restore?",
+    "merge": "Merge",
+    "replace": "Replace all",
+    "restoreDone": "Restored. Posters are downloading in the background.",
+    "replaceConfirm": "The collection on this device will be replaced by the backup.",
+    "banner": "Backup isn't working: {error}",
+    "openSettings": "Settings",
+    "errors": {
+      "unauthorized": "the token is invalid or expired",
+      "forbidden": "the token can't write to the repo",
+      "notFound": "repository not found or the token has no access to it",
+      "network": "can't reach GitHub",
+      "conflict": "version conflict, try again",
+      "server": "GitHub is not responding",
+      "invalid": "the backup file is corrupted"
+    }
   }
 }

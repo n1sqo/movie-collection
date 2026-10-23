@@ -276,3 +276,15 @@ body.sheet-open { overflow: hidden; }
 .btn.small { flex: none; padding: 7px 14px; border-radius: 16px; font-size: 15px; }
 .watch-rate { padding: 10px 0 4px; text-align: center; }
 .watch-rate .entry-label { text-align: left; }
+
+/* Backup */
+.group.stack { display: flex; flex-direction: column; gap: 12px; }
+.group.stack > .status { margin: 0; }
+.button-list { display: flex; flex-direction: column; gap: 8px; }
+.button-list .btn { flex: none; }
+.restore-box { padding-top: 4px; }
+.restore-box p { margin: 0 0 8px; }
+.error-banner { background: var(--red); display: flex; align-items: center; gap: 10px; text-align: left; }
+.error-banner span { flex: 1; }
+.banner-link { border: 0; background: rgba(255, 255, 255, 0.25); color: #fff; border-radius: 12px; padding: 4px 10px; font-size: 13px; font-weight: 600; }
+.banner-close { border: 0; background: none; color: #fff; font-size: 20px; padding: 0 4px; }
