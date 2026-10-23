@@ -64,7 +64,10 @@
     "markWatched": "Mark as watched",
     "loading": "Loading…",
     "chooseRating": "Pick a rating",
-    "inCollection": "In collection"
+    "inCollection": "In collection",
+    "saveNote": "Save note",
+    "noteSaved": "Note saved",
+    "done": "Done"
   },
   "collection": {
     "search": "Search collection",

@@ -64,7 +64,10 @@
     "markWatched": "Позначити як переглянутий",
     "loading": "Завантажую…",
     "chooseRating": "Обери оцінку",
-    "inCollection": "У колекції"
+    "inCollection": "У колекції",
+    "saveNote": "Зберегти нотатку",
+    "noteSaved": "Нотатку збережено",
+    "done": "Готово"
   },
   "collection": {
     "search": "Пошук у колекції",

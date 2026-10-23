@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'preact/hooks'
-import { IMG } from './api/tmdb'
+import { posterUrl } from './api/tmdb'
 
 export function usePosterUrl(blob: Blob | undefined, posterPath: string | undefined, size = 'w500'): string | undefined {
   const [url, setUrl] = useState<string>()
@@ -9,7 +9,7 @@ export function usePosterUrl(blob: Blob | undefined, posterPath: string | undefi
       setUrl(objectUrl)
       return () => URL.revokeObjectURL(objectUrl)
     }
-    setUrl(posterPath ? `${IMG}/${size}${posterPath}` : undefined)
+    setUrl(posterPath ? posterUrl(posterPath, size) : undefined)
   }, [blob, posterPath, size])
   return url
 }

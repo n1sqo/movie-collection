@@ -3,6 +3,7 @@ import { lang, t, type Lang } from '../i18n'
 import { saveLang, saveTmdbToken, tmdbToken } from '../settings'
 import { checkToken, TmdbError } from '../api/tmdb'
 import { Screen } from '../components/Screen'
+import tmdbLogo from '../assets/tmdb-logo.svg'
 import { BackupSettings } from '../components/BackupSettings'
 import { DataSettings, Stats } from '../components/DataSettings'
 
@@ -79,7 +80,7 @@ export function Settings() {
       <Stats />
 
       <div class="attribution">
-        <img src={`${import.meta.env.BASE_URL}tmdb-logo.svg`} alt="TMDB" width={96} height={96} />
+        <img src={tmdbLogo} alt="TMDB" width={96} height={96} />
         <p>{t('settings.attribution')}</p>
       </div>
     </Screen>

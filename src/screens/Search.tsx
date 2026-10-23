@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 import { lang, t } from '../i18n'
 import { tmdbToken } from '../settings'
 import { online } from '../useOnline'
-import { IMG, searchMovies, TmdbError, type SearchResult } from '../api/tmdb'
+import { posterUrl, searchMovies, TmdbError, type SearchResult } from '../api/tmdb'
 import { Screen } from '../components/Screen'
 import { tab } from '../app'
 import { openMovie } from '../components/MovieSheet'
@@ -131,7 +131,7 @@ function Results({ results }: { results: SearchResult[] }) {
             }
           >
             {m.posterPath ? (
-              <img class="thumb" src={`${IMG}/w185${m.posterPath}`} alt="" loading="lazy" />
+              <img class="thumb" src={posterUrl(m.posterPath, 'w185')} alt="" loading="lazy" />
             ) : (
               <div class="thumb placeholder" />
             )}

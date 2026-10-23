@@ -78,12 +78,14 @@ function MovieSheet({ id, preview, onClose }: { id: number; preview?: SheetPrevi
             </div>
           </div>
 
-          {movie && entry !== undefined && <EntryEditor movie={movie} entry={entry} onRemoved={onClose} />}
+          {movie && entry !== undefined && <EntryEditor movie={movie} entry={entry} onDone={onClose} />}
 
           {!movie && !error && <div class="spinner" aria-busy="true" />}
           {error && !movie && <p class="notice error">{error}</p>}
 
           {movie && <MovieDetails movie={movie} />}
+
+          {entry && <RemoveButton tmdbId={id} onRemoved={onClose} />}
         </div>
       </div>
     </div>
@@ -134,17 +136,9 @@ function MovieDetails({ movie }: { movie: Movie }) {
   )
 }
 
-function EntryEditor({
-  movie,
-  entry,
-  onRemoved
-}: {
-  movie: Movie
-  entry: Entry | null
-  onRemoved: () => void
-}) {
+function EntryEditor({ movie, entry, onDone }: { movie: Movie; entry: Entry | null; onDone: () => void }) {
   const [pickingRating, setPickingRating] = useState(false)
-  const [confirmRemove, setConfirmRemove] = useState(false)
+  const [noteSaved, setNoteSaved] = useState(false)
   const [note, setNote] = useState(entry?.note ?? '')
 
   useEffect(() => setNote(entry?.note ?? ''), [entry?.note])
@@ -173,30 +167,6 @@ function EntryEditor({
     )
   }
 
-  const removeBlock = confirmRemove ? (
-    <div class="remove-confirm">
-      <p>{t('movie.removeConfirm')}</p>
-      <div class="row-buttons">
-        <button class="btn" onClick={() => setConfirmRemove(false)}>
-          {t('movie.cancel')}
-        </button>
-        <button
-          class="btn destructive"
-          onClick={async () => {
-            await removeFromCollection(movie.tmdbId)
-            onRemoved()
-          }}
-        >
-          {t('movie.removeYes')}
-        </button>
-      </div>
-    </div>
-  ) : (
-    <button class="link destructive" onClick={() => setConfirmRemove(true)}>
-      {t('movie.remove')}
-    </button>
-  )
-
   if (entry.status === 'watchlist') {
     return (
       <div class="entry-box">
@@ -213,10 +183,12 @@ function EntryEditor({
             {t('movie.markWatched')}
           </button>
         )}
-        {removeBlock}
       </div>
     )
   }
+
+  const noteChanged = note !== (entry.note ?? '')
+  const saveNote = () => updateEntry(movie.tmdbId, { note: note.trim() || undefined }).then(() => setNoteSaved(true))
 
   return (
     <div class="entry-box">
@@ -237,11 +209,60 @@ function EntryEditor({
           rows={3}
           placeholder={t('movie.notePlaceholder')}
           value={note}
-          onInput={(e) => setNote(e.currentTarget.value)}
-          onBlur={() => note !== (entry.note ?? '') && updateEntry(movie.tmdbId, { note: note || undefined })}
+          onInput={(e) => {
+            setNote(e.currentTarget.value)
+            setNoteSaved(false)
+          }}
+          // Closing the sheet or tapping elsewhere still keeps what was typed.
+          onBlur={() => noteChanged && saveNote()}
         />
       </label>
-      {removeBlock}
+      {noteChanged ? (
+        <button class="btn note-save" onClick={saveNote}>
+          {t('movie.saveNote')}
+        </button>
+      ) : (
+        noteSaved && <p class="status ok note-status">{t('movie.noteSaved')}</p>
+      )}
+      <button
+        class="btn primary done"
+        onClick={async () => {
+          if (noteChanged) await saveNote()
+          onDone()
+        }}
+      >
+        {t('movie.done')}
+      </button>
+    </div>
+  )
+}
+
+function RemoveButton({ tmdbId, onRemoved }: { tmdbId: number; onRemoved: () => void }) {
+  const [confirm, setConfirm] = useState(false)
+  if (!confirm) {
+    return (
+      <button class="link destructive remove-link" onClick={() => setConfirm(true)}>
+        {t('movie.remove')}
+      </button>
+    )
+  }
+  return (
+    <div class="remove-confirm">
+      <p>{t('movie.removeConfirm')}</p>
+      <div class="row-buttons">
+        <button class="btn" onClick={() => setConfirm(false)}>
+          {t('movie.cancel')}
+        </button>
+        <button
+          class="btn destructive"
+          onClick={async () => {
+            await removeFromCollection(tmdbId)
+            onRemoved()
+          }}
+        >
+          {t('movie.removeYes')}
+        </button>
+      </div>
     </div>
   )
 }
