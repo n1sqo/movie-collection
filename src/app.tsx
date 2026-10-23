@@ -8,6 +8,8 @@ import { Watchlist } from './screens/Watchlist'
 import { Settings } from './screens/Settings'
 import { MovieSheetHost } from './components/MovieSheet'
 import { BackupBanner } from './components/BackupBanner'
+import { ToastHost } from './components/Toast'
+import { UpdateBanner } from './components/UpdateBanner'
 
 export const tab = signal<Tab>('collection')
 
@@ -15,6 +17,7 @@ export function App() {
   return (
     <div class="app">
       {!online.value && <div class="banner">{t('offline')}</div>}
+      <UpdateBanner />
       <BackupBanner />
       <main class="screen">
         {tab.value === 'search' && <Search />}
@@ -31,6 +34,7 @@ export function App() {
         }}
       />
       <MovieSheetHost />
+      <ToastHost />
     </div>
   )
 }

@@ -21,12 +21,9 @@ export interface Item {
 export const emptyFilters: Filters = { text: '', genre: '', person: '' }
 
 export function activeFilterCount(f: Filters): number {
-  return [
-    f.genre,
-    f.person.trim(),
-    f.yearFrom ?? f.yearTo,
-    f.ratingFrom ?? f.ratingTo
-  ].filter((v) => v !== undefined && v !== '').length
+  return [f.genre, f.person.trim(), f.yearFrom ?? f.yearTo, f.ratingFrom ?? f.ratingTo].filter(
+    (v) => v !== undefined && v !== ''
+  ).length
 }
 
 export function displayTitle(movie: Movie, lang: Lang): string {
@@ -40,31 +37,41 @@ export function displayGenres(movie: Movie, lang: Lang): string[] {
 
 const norm = (s: string) => s.toLocaleLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
 
+/** Accepts the range in either order, so "2020 – 1990" means 1990–2020. */
+function range(a?: number, b?: number): [number | undefined, number | undefined] {
+  return a !== undefined && b !== undefined && a > b ? [b, a] : [a, b]
+}
+
 export function applyQuery(items: Item[], filters: Filters, sort: SortKey, asc: boolean, lang: Lang): Item[] {
   const text = norm(filters.text.trim())
+  const [yearFrom, yearTo] = range(filters.yearFrom, filters.yearTo)
+  const [ratingFrom, ratingTo] = range(filters.ratingFrom, filters.ratingTo)
   const person = norm(filters.person.trim())
   const result = items.filter(({ movie, entry }) => {
-    if (text && ![movie.titleUk, movie.titleEn, movie.originalTitle].some((title) => norm(title ?? '').includes(text))) return false
+    if (text && ![movie.titleUk, movie.titleEn, movie.originalTitle].some((title) => norm(title ?? '').includes(text)))
+      return false
     if (filters.genre && ![...movie.genres, ...(movie.genresEn ?? [])].includes(filters.genre)) return false
-    if (person && ![...movie.directors, ...movie.cast.map((c) => c.name)].some((name) => norm(name).includes(person))) return false
-    if (filters.yearFrom !== undefined && movie.year < filters.yearFrom) return false
-    if (filters.yearTo !== undefined && movie.year > filters.yearTo) return false
-    if (filters.ratingFrom !== undefined && (entry.myRating ?? 0) < filters.ratingFrom) return false
-    if (filters.ratingTo !== undefined && (entry.myRating ?? 0) > filters.ratingTo) return false
+    if (person && ![...movie.directors, ...movie.cast.map((c) => c.name)].some((name) => norm(name).includes(person)))
+      return false
+    if (yearFrom !== undefined && (!movie.year || movie.year < yearFrom)) return false
+    if (yearTo !== undefined && (!movie.year || movie.year > yearTo)) return false
+    if (ratingFrom !== undefined && (entry.myRating ?? 0) < ratingFrom) return false
+    if (ratingTo !== undefined && (entry.myRating ?? 0) > ratingTo) return false
     return true
   })
 
   const collator = new Intl.Collator(lang === 'uk' ? 'uk' : 'en', { sensitivity: 'base' })
-  const key = (item: Item): number | string => {
+  // undefined = unknown (no rating, no release date…): always sorted to the end.
+  const key = (item: Item): number | string | undefined => {
     switch (sort) {
       case 'myRating':
-        return item.entry.myRating ?? 0
+        return item.entry.myRating
       case 'tmdbRating':
-        return item.movie.tmdbRating
+        return item.movie.tmdbRating || undefined
       case 'year':
-        return item.movie.releaseDate || String(item.movie.year)
+        return item.movie.releaseDate || (item.movie.year ? String(item.movie.year) : undefined)
       case 'watchedAt':
-        return item.entry.watchedAt ?? ''
+        return item.entry.watchedAt
       case 'title':
         return displayTitle(item.movie, lang)
       case 'addedAt':
@@ -75,10 +82,17 @@ export function applyQuery(items: Item[], filters: Filters, sort: SortKey, asc: 
   return result.sort((a, b) => {
     const ka = key(a)
     const kb = key(b)
+    if (ka === undefined || kb === undefined) {
+      if (ka !== kb) return ka === undefined ? 1 : -1
+      return b.entry.addedAt.localeCompare(a.entry.addedAt)
+    }
     const primary =
       typeof ka === 'number' && typeof kb === 'number' ? ka - kb : collator.compare(String(ka), String(kb))
     if (primary !== 0) return primary * dir
     // Stable tiebreak: newest added first, then title.
-    return b.entry.addedAt.localeCompare(a.entry.addedAt) || collator.compare(displayTitle(a.movie, lang), displayTitle(b.movie, lang))
+    return (
+      b.entry.addedAt.localeCompare(a.entry.addedAt) ||
+      collator.compare(displayTitle(a.movie, lang), displayTitle(b.movie, lang))
+    )
   })
 }

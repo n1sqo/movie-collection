@@ -2,12 +2,17 @@ import { defineConfig } from 'vite'
 import preact from '@preact/preset-vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Shown in Settings so it's clear which build is running. CI passes the commit sha.
+const version = `${new Date().toISOString().slice(0, 10)}·${(process.env.GITHUB_SHA ?? 'local').slice(0, 7)}`
+
 export default defineConfig({
   base: '/movie-collection/',
+  define: { __APP_VERSION__: JSON.stringify(version) },
   plugins: [
     preact(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
+      injectRegister: false,
       includeAssets: ['apple-touch-icon.png', 'favicon.svg'],
       manifest: {
         name: 'Movie Collection',

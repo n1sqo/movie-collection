@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks'
+import { useMemo, useState } from 'preact/hooks'
 import { lang, t, tn } from '../i18n'
 import { db } from '../db'
 import { useLiveQuery } from '../useLiveQuery'
@@ -6,21 +6,43 @@ import { usePosterUrl } from '../usePosterUrl'
 import { Screen } from '../components/Screen'
 import { RatingPicker } from '../components/RatingPicker'
 import { openMovie } from '../components/MovieSheet'
-import { today, updateEntry } from '../data/collection'
-import { displayTitle, type Item } from '../data/query'
+import { showToast } from '../components/Toast'
+import { removeFromCollection, today, undoRemove, updateEntry } from '../data/collection'
+import { applyQuery, displayTitle, emptyFilters, type Item, type SortKey } from '../data/query'
 import { tab } from '../app'
+
+const SORT_KEYS: SortKey[] = ['addedAt', 'tmdbRating', 'year', 'title']
+const PREFS_KEY = 'watchlist-view'
+
+function loadSort(): { sort: SortKey; asc: boolean } {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PREFS_KEY) ?? '')
+    if (SORT_KEYS.includes(saved.sort)) return { sort: saved.sort, asc: !!saved.asc }
+  } catch {}
+  return { sort: 'addedAt', asc: false }
+}
 
 async function loadWatchlist(): Promise<Item[]> {
   const entries = await db.entries.where('status').equals('watchlist').toArray()
   const movies = await db.movies.bulkGet(entries.map((e) => e.tmdbId))
-  return entries
-    .flatMap((entry, i) => (movies[i] ? [{ entry, movie: movies[i]! }] : []))
-    .sort((a, b) => b.entry.addedAt.localeCompare(a.entry.addedAt))
+  return entries.flatMap((entry, i) => (movies[i] ? [{ entry, movie: movies[i]! }] : []))
 }
 
 export function Watchlist() {
   const items = useLiveQuery(loadWatchlist)
   const [rating, setRating] = useState<number | null>(null)
+  const [text, setText] = useState('')
+  const [prefs, setPrefsState] = useState(loadSort)
+  const setPrefs = (next: typeof prefs) => {
+    setPrefsState(next)
+    try {
+      localStorage.setItem(PREFS_KEY, JSON.stringify(next))
+    } catch {}
+  }
+  const visible = useMemo(
+    () => (items ? applyQuery(items, { ...emptyFilters, text }, prefs.sort, prefs.asc, lang.value) : []),
+    [items, text, prefs, lang.value]
+  )
 
   if (items && items.length === 0) {
     return (
@@ -37,9 +59,52 @@ export function Watchlist() {
 
   return (
     <Screen title={t('titles.watchlist')}>
-      {items && <div class="collection-count">{tn('collection.count', items.length)}</div>}
+      <div class="search-field">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+          <path
+            fill="currentColor"
+            d="M10.5 3a7.5 7.5 0 0 1 5.9 12.1l4.2 4.2-1.4 1.4-4.2-4.2A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"
+          />
+        </svg>
+        <input
+          type="search"
+          autocomplete="off"
+          placeholder={t('watchlist.search')}
+          value={text}
+          onInput={(e) => setText(e.currentTarget.value)}
+          onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        />
+        {text && (
+          <button class="clear" aria-label="clear" onClick={() => setText('')}>
+            ×
+          </button>
+        )}
+      </div>
+      <div class="toolbar">
+        <label class="sort-select">
+          <span class="sr-only">{t('collection.sort')}</span>
+          <select value={prefs.sort} onChange={(e) => setPrefs({ ...prefs, sort: e.currentTarget.value as SortKey })}>
+            {SORT_KEYS.map((key) => (
+              <option key={key} value={key}>
+                {t(`collection.sortBy.${key}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          class="icon-btn"
+          aria-label={prefs.asc ? t('collection.asc') : t('collection.desc')}
+          onClick={() => setPrefs({ ...prefs, asc: !prefs.asc })}
+        >
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" class={prefs.asc ? 'flip' : ''}>
+            <path fill="currentColor" d="M11 4h2v12.2l4.6-4.6 1.4 1.4-7 7-7-7 1.4-1.4 4.6 4.6V4Z" />
+          </svg>
+        </button>
+      </div>
+      {items && <div class="collection-count">{tn('collection.count', visible.length)}</div>}
+      {items && visible.length === 0 && <p class="notice muted">{t('collection.noMatch')}</p>}
       <ul class="results">
-        {items?.map((item) => (
+        {visible.map((item) => (
           <WatchlistRow
             key={item.movie.tmdbId}
             item={item}
@@ -57,6 +122,12 @@ function WatchlistRow({ item, rating, onRate }: { item: Item; rating: boolean; o
   const url = usePosterUrl(movie.posterBlob, movie.posterPath, 'w185')
   const title = displayTitle(movie, lang.value)
   const other = lang.value === 'uk' ? movie.titleEn : movie.titleUk
+
+  async function remove() {
+    const removed = await removeFromCollection(movie.tmdbId)
+    if (removed) showToast(t('movie.removed'), { label: t('movie.undo'), run: () => undoRemove(removed) })
+  }
+
   return (
     <li class="result watch-row">
       <div class="watch-main" onClick={() => (openMovie.value = { id: movie.tmdbId })}>
@@ -67,15 +138,32 @@ function WatchlistRow({ item, rating, onRate }: { item: Item; rating: boolean; o
           {movie.year > 0 && <div class="result-year">{movie.year}</div>}
         </div>
         {!rating && (
-          <button
-            class="btn small"
-            onClick={(e) => {
-              e.stopPropagation()
-              onRate(true)
-            }}
-          >
-            {t('watchlist.watched')}
-          </button>
+          <div class="watch-actions">
+            <button
+              class="btn small"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRate(true)
+              }}
+            >
+              {t('watchlist.watched')}
+            </button>
+            <button
+              class="icon-btn danger"
+              aria-label={t('watchlist.remove')}
+              onClick={(e) => {
+                e.stopPropagation()
+                void remove()
+              }}
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                <path
+                  fill="currentColor"
+                  d="M9 3h6l1 2h4v2H4V5h4l1-2Zm-3 6h12l-1 12H7L6 9Zm4 2v8h1.5v-8H10Zm3.5 0v8H15v-8h-1.5Z"
+                />
+              </svg>
+            </button>
+          </div>
         )}
       </div>
       {rating && (
@@ -83,6 +171,7 @@ function WatchlistRow({ item, rating, onRate }: { item: Item; rating: boolean; o
           <div class="entry-label">{t('watchlist.rate')}</div>
           <RatingPicker
             onChange={(myRating) => {
+              if (!myRating) return
               onRate(false)
               updateEntry(movie.tmdbId, { status: 'watched', myRating, watchedAt: today() })
             }}

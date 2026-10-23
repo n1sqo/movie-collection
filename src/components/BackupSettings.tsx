@@ -21,8 +21,7 @@ type Action =
   | { kind: 'message'; text: string; error?: boolean }
   | { kind: 'restore'; snapshot: Snapshot; confirmReplace?: boolean }
 
-const errorText = (err: unknown) =>
-  t(`backup.errors.${err instanceof BackupError ? err.kind : 'network'}`)
+const errorText = (err: unknown) => t(`backup.errors.${err instanceof BackupError ? err.kind : 'network'}`)
 
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString(lang.value === 'uk' ? 'uk-UA' : 'en-GB', {
@@ -116,9 +115,7 @@ export function BackupSettings() {
           <button
             class="btn"
             disabled={!ready || action.kind === 'busy'}
-            onClick={() =>
-              run(t('backup.checking'), async () => ({ kind: 'restore', snapshot: await fetchBackup() }))
-            }
+            onClick={() => run(t('backup.checking'), async () => ({ kind: 'restore', snapshot: await fetchBackup() }))}
           >
             {t('backup.restore')}
           </button>

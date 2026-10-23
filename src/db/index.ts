@@ -34,6 +34,12 @@ export interface Entry {
   updatedAt: string
 }
 
+/** Remembers a removal so a merge with an older backup doesn't bring the movie back. */
+export interface Tombstone {
+  tmdbId: number
+  deletedAt: string
+}
+
 export interface Setting {
   key: string
   value: unknown
@@ -43,12 +49,17 @@ export const db = new Dexie('movie-collection') as Dexie & {
   movies: EntityTable<Movie, 'tmdbId'>
   entries: EntityTable<Entry, 'tmdbId'>
   settings: EntityTable<Setting, 'key'>
+  deleted: EntityTable<Tombstone, 'tmdbId'>
 }
 
 db.version(1).stores({
   movies: 'tmdbId, year, tmdbRating',
   entries: 'tmdbId, status, myRating, watchedAt, addedAt, updatedAt',
   settings: 'key'
+})
+
+db.version(2).stores({
+  deleted: 'tmdbId'
 })
 
 export async function getSetting<T>(key: string): Promise<T | undefined> {

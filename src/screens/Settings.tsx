@@ -7,18 +7,30 @@ import tmdbLogo from '../assets/tmdb-logo.svg'
 import { BackupSettings } from '../components/BackupSettings'
 import { DataSettings, Stats } from '../components/DataSettings'
 
-type CheckState = { kind: 'idle' } | { kind: 'busy' } | { kind: 'ok' } | { kind: 'saved' } | { kind: 'error'; message: string }
+/** The short 32-character "API Key" from TMDB is a different credential than the Read Access Token. */
+const looksLikeApiKey = (value: string) => /^[a-f0-9]{32}$/i.test(value.trim())
+
+type CheckState =
+  { kind: 'idle' } | { kind: 'busy' } | { kind: 'ok' } | { kind: 'saved' } | { kind: 'error'; message: string }
 
 export function Settings() {
   const [token, setToken] = useState(tmdbToken.value)
   const [check, setCheck] = useState<CheckState>({ kind: 'idle' })
 
   async function onSave() {
+    if (looksLikeApiKey(token)) {
+      setCheck({ kind: 'error', message: t('settings.wrongKeyType') })
+      return
+    }
     await saveTmdbToken(token)
     setCheck({ kind: 'saved' })
   }
 
   async function onCheck() {
+    if (looksLikeApiKey(token)) {
+      setCheck({ kind: 'error', message: t('settings.wrongKeyType') })
+      return
+    }
     setCheck({ kind: 'busy' })
     try {
       await checkToken(token.trim())
@@ -71,7 +83,17 @@ export function Settings() {
         {check.kind === 'saved' && <p class="status ok">{t('settings.saved')}</p>}
         {check.kind === 'error' && <p class="status error">{check.message}</p>}
       </div>
-      <p class="group-footer">{t('settings.tmdbTokenHint')}</p>
+      <div class="group-footer">
+        <p>{t('settings.tmdbTokenHint')}</p>
+        <ol class="steps">
+          <li>{t('settings.tmdbStep1')}</li>
+          <li>{t('settings.tmdbStep2')}</li>
+          <li>{t('settings.tmdbStep3')}</li>
+        </ol>
+        <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">
+          themoviedb.org/settings/api
+        </a>
+      </div>
 
       <BackupSettings />
 
@@ -82,6 +104,9 @@ export function Settings() {
       <div class="attribution">
         <img src={tmdbLogo} alt="TMDB" width={96} height={96} />
         <p>{t('settings.attribution')}</p>
+        <p class="version">
+          {t('settings.version')} {__APP_VERSION__}
+        </p>
       </div>
     </Screen>
   )

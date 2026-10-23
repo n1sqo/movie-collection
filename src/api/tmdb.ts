@@ -53,25 +53,57 @@ export async function checkToken(token: string): Promise<void> {
   await request(token, '/authentication')
 }
 
-export async function searchMovies(token: string, query: string, signal?: AbortSignal): Promise<SearchResult[]> {
+export interface SearchPage {
+  results: SearchResult[]
+  page: number
+  totalPages: number
+}
+
+/** TMDB caps search at 500 pages of 20 results. */
+const MAX_PAGES = 500
+
+/**
+ * Searches in Ukrainian and English at once (TMDB matches titles per language) and merges
+ * both result lists, ordered by the interface language.
+ */
+export async function searchMovies(
+  token: string,
+  query: string,
+  page: number,
+  primary: 'uk' | 'en',
+  signal?: AbortSignal
+): Promise<SearchPage> {
   const q = encodeURIComponent(query)
   const [uk, en] = await Promise.all(
     (['uk-UA', 'en-US'] as const).map((language) =>
-      request<{ results: RawMovie[] }>(token, `/search/movie?query=${q}&language=${language}&include_adult=false`, signal)
+      request<{ results: RawMovie[]; total_pages?: number }>(
+        token,
+        `/search/movie?query=${q}&language=${language}&include_adult=false&page=${page}`,
+        signal
+      )
     )
   )
-  const enTitles = new Map(en.results.map((m) => [m.id, m.title]))
-  const merged = new Map<number, RawMovie>(uk.results.map((m) => [m.id, m]))
-  // Results only found by the English search (e.g. English-only query) go after the Ukrainian ones.
-  for (const m of en.results) if (!merged.has(m.id)) merged.set(m.id, m)
-  return [...merged.values()].map((m) => ({
-    id: m.id,
-    titleUk: m.title,
-    titleEn: enTitles.get(m.id) ?? m.title,
-    originalTitle: m.original_title,
-    year: m.release_date ? Number(m.release_date.slice(0, 4)) : undefined,
-    posterPath: m.poster_path ?? undefined
-  }))
+  const ukById = new Map(uk.results.map((m) => [m.id, m]))
+  const enById = new Map(en.results.map((m) => [m.id, m]))
+  const order = primary === 'uk' ? [...uk.results, ...en.results] : [...en.results, ...uk.results]
+  const seen = new Set<number>()
+  const results: SearchResult[] = []
+  for (const m of order) {
+    if (seen.has(m.id)) continue
+    seen.add(m.id)
+    const ukTitle = ukById.get(m.id)?.title
+    const enTitle = enById.get(m.id)?.title
+    results.push({
+      id: m.id,
+      titleUk: ukTitle ?? enTitle ?? m.title,
+      titleEn: enTitle ?? ukTitle ?? m.title,
+      originalTitle: m.original_title,
+      year: m.release_date ? Number(m.release_date.slice(0, 4)) : undefined,
+      posterPath: m.poster_path ?? undefined
+    })
+  }
+  const totalPages = Math.min(MAX_PAGES, Math.max(uk.total_pages ?? 1, en.total_pages ?? 1))
+  return { results, page, totalPages }
 }
 
 interface RawDetails {
@@ -126,4 +158,32 @@ export async function downloadPoster(posterPath: string): Promise<Blob | undefin
   } catch {
     return undefined
   }
+}
+
+interface RawVideo {
+  key: string
+  site: string
+  type: string
+  official: boolean
+  published_at?: string
+}
+
+/**
+ * YouTube key of the best trailer: Ukrainian first, then English; official trailers
+ * before teasers, newest first. Undefined when TMDB has none.
+ */
+export async function getTrailerKey(token: string, id: number, signal?: AbortSignal): Promise<string | undefined> {
+  const rank = (v: RawVideo) => (v.type === 'Trailer' ? 0 : 2) + (v.official ? 0 : 1)
+  for (const language of ['uk-UA', 'en-US']) {
+    const { results } = await request<{ results: RawVideo[] }>(
+      token,
+      `/movie/${id}/videos?language=${language}`,
+      signal
+    )
+    const best = results
+      .filter((v) => v.site === 'YouTube' && (v.type === 'Trailer' || v.type === 'Teaser'))
+      .sort((a, b) => rank(a) - rank(b) || (b.published_at ?? '').localeCompare(a.published_at ?? ''))[0]
+    if (best) return best.key
+  }
+  return undefined
 }

@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'preact/hooks'
 import { posterUrl } from './api/tmdb'
 
-export function usePosterUrl(blob: Blob | undefined, posterPath: string | undefined, size = 'w500'): string | undefined {
+export function usePosterUrl(
+  blob: Blob | undefined,
+  posterPath: string | undefined,
+  size = 'w500'
+): string | undefined {
   const [url, setUrl] = useState<string>()
   useEffect(() => {
     if (blob) {

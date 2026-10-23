@@ -3,7 +3,7 @@ import { lang, t, tn } from '../i18n'
 import { db } from '../db'
 import { useLiveQuery } from '../useLiveQuery'
 import { displayGenres } from '../data/query'
-import { applySnapshot, buildSnapshot, parseSnapshot, type Snapshot } from '../backup/github'
+import { applySnapshot, buildSnapshot, parseSnapshot, serializeSnapshot, type Snapshot } from '../backup/github'
 import { today } from '../data/collection'
 
 type State =
@@ -14,7 +14,7 @@ type State =
 async function exportCollection(): Promise<void> {
   const snapshot = await buildSnapshot()
   const name = `movie-collection-${today()}.json`
-  const file = new File([JSON.stringify(snapshot, null, 2)], name, { type: 'application/json' })
+  const file = new File([serializeSnapshot(snapshot)], name, { type: 'application/json' })
   // iOS: the share sheet lets you save to Files, AirDrop, etc.
   if (navigator.canShare?.({ files: [file] })) {
     try {
@@ -46,9 +46,8 @@ export function DataSettings() {
   }
 
   async function apply(snapshot: Snapshot, mode: 'merge' | 'replace') {
-    await applySnapshot(snapshot, mode)
-    // A file import always differs from the remote backup, so make sure it gets backed up.
-    if (mode === 'replace') await applySnapshot(snapshot, 'merge')
+    // A file import can differ from the GitHub backup, so always back it up afterwards.
+    await applySnapshot(snapshot, mode, { markDirty: true })
     setState({ kind: 'message', text: t('data.importDone') })
   }
 

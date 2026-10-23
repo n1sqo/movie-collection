@@ -123,7 +123,10 @@ export function Collection() {
           </svg>
         </button>
         <span class="toolbar-spacer" />
-        <button class={showFilters || filterCount ? 'chip-btn active' : 'chip-btn'} onClick={() => setShowFilters(!showFilters)}>
+        <button
+          class={showFilters || filterCount ? 'chip-btn active' : 'chip-btn'}
+          onClick={() => setShowFilters(!showFilters)}
+        >
           {t('collection.filters')}
           {filterCount > 0 && <span class="count">{filterCount}</span>}
         </button>
@@ -158,7 +161,15 @@ function PosterTile({ item }: { item: Item }) {
   )
 }
 
-function FilterPanel({ items, filters, onChange }: { items: Item[]; filters: Filters; onChange: (f: Filters) => void }) {
+function FilterPanel({
+  items,
+  filters,
+  onChange
+}: {
+  items: Item[]
+  filters: Filters
+  onChange: (f: Filters) => void
+}) {
   const genres = useMemo(() => {
     const all = new Set(items.flatMap((i) => displayGenres(i.movie, lang.value)))
     return [...all].sort((a, b) => a.localeCompare(b, lang.value))
@@ -206,7 +217,10 @@ function FilterPanel({ items, filters, onChange }: { items: Item[]; filters: Fil
       <div class="filter-row">
         <span>{t('collection.rating')}</span>
         <div class="range">
-          <select value={filters.ratingFrom ?? ''} onChange={(e) => onChange({ ...filters, ratingFrom: num(e.currentTarget.value) })}>
+          <select
+            value={filters.ratingFrom ?? ''}
+            onChange={(e) => onChange({ ...filters, ratingFrom: num(e.currentTarget.value) })}
+          >
             <option value="">{t('collection.from')}</option>
             {ratings.map((r) => (
               <option key={r} value={r}>
@@ -215,7 +229,10 @@ function FilterPanel({ items, filters, onChange }: { items: Item[]; filters: Fil
             ))}
           </select>
           <span>–</span>
-          <select value={filters.ratingTo ?? ''} onChange={(e) => onChange({ ...filters, ratingTo: num(e.currentTarget.value) })}>
+          <select
+            value={filters.ratingTo ?? ''}
+            onChange={(e) => onChange({ ...filters, ratingTo: num(e.currentTarget.value) })}
+          >
             <option value="">{t('collection.to')}</option>
             {ratings.map((r) => (
               <option key={r} value={r}>

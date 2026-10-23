@@ -2,7 +2,7 @@ import { useEffect, useState } from 'preact/hooks'
 import { lang, t } from '../i18n'
 import { tmdbToken } from '../settings'
 import { online } from '../useOnline'
-import { posterUrl, searchMovies, TmdbError, type SearchResult } from '../api/tmdb'
+import { posterUrl, searchMovies, TmdbError, type SearchPage, type SearchResult } from '../api/tmdb'
 import { Screen } from '../components/Screen'
 import { tab } from '../app'
 import { openMovie } from '../components/MovieSheet'
@@ -10,52 +10,68 @@ import { db } from '../db'
 import { useLiveQuery } from '../useLiveQuery'
 
 const DEBOUNCE_MS = 400
+const MIN_QUERY = 2
 
 type State =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'done'; results: SearchResult[] }
+  | { kind: 'done'; query: string; data: SearchPage }
   | { kind: 'error'; message: string }
 
+// Survive tab switches within a session.
 let lastQuery = ''
+let lastPage = 1
 let lastState: State = { kind: 'idle' }
 
 export function Search() {
-  const [query, setQuery] = useState(lastQuery)
+  const [query, setQueryState] = useState(lastQuery)
+  const [page, setPageState] = useState(lastPage)
   const [state, setState] = useState<State>(lastState)
 
-  useEffect(() => {
-    lastQuery = query
-  }, [query])
+  const setQuery = (q: string) => {
+    lastQuery = q
+    setQueryState(q)
+    lastPage = 1
+    setPageState(1)
+  }
+  const setPage = (p: number) => {
+    lastPage = p
+    setPageState(p)
+    window.scrollTo(0, 0)
+  }
   useEffect(() => {
     lastState = state
   }, [state])
 
   useEffect(() => {
     const q = query.trim()
-    if (!q || !tmdbToken.value || !online.value) {
-      if (!q) setState({ kind: 'idle' })
+    if (q.length < MIN_QUERY) {
+      setState({ kind: 'idle' })
       return
     }
-    if (q === lastSearched && state.kind === 'done') return
+    // Offline or no key: keep whatever is on screen.
+    if (!tmdbToken.value || !online.value) return
+    if (state.kind === 'done' && state.query === q && state.data.page === page) return
     const controller = new AbortController()
-    const timer = setTimeout(async () => {
-      setState({ kind: 'loading' })
-      try {
-        const results = await searchMovies(tmdbToken.value, q, controller.signal)
-        lastSearched = q
-        setState({ kind: 'done', results })
-      } catch (err) {
-        if ((err as Error).name === 'AbortError') return
-        const kind = err instanceof TmdbError ? err.kind : 'network'
-        setState({ kind: 'error', message: t(`errors.${kind}`) })
-      }
-    }, DEBOUNCE_MS)
+    const timer = setTimeout(
+      async () => {
+        setState({ kind: 'loading' })
+        try {
+          const data = await searchMovies(tmdbToken.value, q, page, lang.value, controller.signal)
+          setState({ kind: 'done', query: q, data })
+        } catch (err) {
+          if ((err as Error).name === 'AbortError') return
+          const kind = err instanceof TmdbError ? err.kind : 'network'
+          setState({ kind: 'error', message: t(`errors.${kind}`) })
+        }
+      },
+      page === 1 ? DEBOUNCE_MS : 0
+    )
     return () => {
       clearTimeout(timer)
       controller.abort()
     }
-  }, [query, tmdbToken.value, online.value])
+  }, [query, page, tmdbToken.value, online.value])
 
   return (
     <Screen title={t('titles.search')}>
@@ -81,14 +97,22 @@ export function Search() {
           </button>
         )}
       </div>
-      <SearchBody state={state} query={query} />
+      <SearchBody state={state} query={query} page={page} onPage={setPage} />
     </Screen>
   )
 }
 
-let lastSearched = ''
-
-function SearchBody({ state, query }: { state: State; query: string }) {
+function SearchBody({
+  state,
+  query,
+  page,
+  onPage
+}: {
+  state: State
+  query: string
+  page: number
+  onPage: (p: number) => void
+}) {
   if (!tmdbToken.value) {
     return (
       <div class="notice">
@@ -99,13 +123,85 @@ function SearchBody({ state, query }: { state: State; query: string }) {
       </div>
     )
   }
+  const offlineNote = !online.value && <p class="inline-note">{t('search.offline')}</p>
+  if (state.kind === 'done' && state.query === query.trim()) {
+    if (state.data.results.length === 0) return <p class="notice muted">{t('search.empty')}</p>
+    return (
+      <>
+        {offlineNote}
+        <Results results={state.data.results} />
+        <Pagination page={page} total={state.data.totalPages} disabled={!online.value} onPage={onPage} />
+      </>
+    )
+  }
   if (!online.value) return <p class="notice">{t('search.offline')}</p>
-  if (!query.trim()) return <p class="notice muted">{t('search.hint')}</p>
-  if (state.kind === 'loading') return <div class="spinner" aria-busy="true" />
+  if (query.trim().length < MIN_QUERY)
+    return <p class="notice muted">{t(query.trim() ? 'search.tooShort' : 'search.hint')}</p>
   if (state.kind === 'error') return <p class="notice error">{state.message}</p>
-  if (state.kind === 'done' && state.results.length === 0) return <p class="notice muted">{t('search.empty')}</p>
-  if (state.kind !== 'done') return null
-  return <Results results={state.results} />
+  return <div class="spinner" aria-busy="true" />
+}
+
+/** Page numbers around the current one, with the first and last always reachable. */
+export function pageList(page: number, total: number): (number | '…')[] {
+  const pages = new Set([1, total, page - 1, page, page + 1].filter((p) => p >= 1 && p <= total))
+  const sorted = [...pages].sort((a, b) => a - b)
+  const out: (number | '…')[] = []
+  sorted.forEach((p, i) => {
+    if (i > 0 && p - sorted[i - 1] > 1) out.push('…')
+    out.push(p)
+  })
+  return out
+}
+
+function Pagination({
+  page,
+  total,
+  disabled,
+  onPage
+}: {
+  page: number
+  total: number
+  disabled: boolean
+  onPage: (p: number) => void
+}) {
+  if (total <= 1) return null
+  return (
+    <nav class="pagination" aria-label={t('search.pages')}>
+      <button
+        class="page-btn"
+        disabled={disabled || page === 1}
+        onClick={() => onPage(page - 1)}
+        aria-label={t('search.prev')}
+      >
+        ‹
+      </button>
+      {pageList(page, total).map((p, i) =>
+        p === '…' ? (
+          <span key={`gap${i}`} class="page-gap">
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            class={p === page ? 'page-btn active' : 'page-btn'}
+            aria-current={p === page ? 'page' : undefined}
+            disabled={disabled}
+            onClick={() => p !== page && onPage(p)}
+          >
+            {p}
+          </button>
+        )
+      )}
+      <button
+        class="page-btn"
+        disabled={disabled || page === total}
+        onClick={() => onPage(page + 1)}
+        aria-label={t('search.next')}
+      >
+        ›
+      </button>
+    </nav>
+  )
 }
 
 function Results({ results }: { results: SearchResult[] }) {

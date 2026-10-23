@@ -5,10 +5,7 @@ import { lang, type Lang } from './i18n'
 export const tmdbToken = signal('')
 
 export async function loadSettings(): Promise<void> {
-  const [savedLang, savedToken] = await Promise.all([
-    getSetting<Lang>('lang'),
-    getSetting<string>('tmdbToken')
-  ])
+  const [savedLang, savedToken] = await Promise.all([getSetting<Lang>('lang'), getSetting<string>('tmdbToken')])
   if (savedLang) lang.value = savedLang
   if (savedToken) tmdbToken.value = savedToken
   document.documentElement.lang = lang.value

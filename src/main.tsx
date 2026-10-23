@@ -2,6 +2,7 @@ import { render } from 'preact'
 import { App } from './app'
 import { loadSettings } from './settings'
 import { loadBackupSettings, startAutoBackup } from './backup/github'
+import { startUpdateCheck } from './update'
 import './styles.css'
 
 if (navigator.storage?.persist) navigator.storage.persist().catch(() => {})
@@ -11,4 +12,5 @@ Promise.all([loadSettings(), loadBackupSettings()])
   .finally(() => {
     render(<App />, document.getElementById('app')!)
     startAutoBackup()
+    startUpdateCheck()
   })

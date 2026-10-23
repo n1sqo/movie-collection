@@ -1,6 +1,6 @@
 import { effect, signal } from '@preact/signals'
-import { db, getSetting, setSetting, type Entry, type Movie } from '../db'
-import { changeCounter } from '../data/collection'
+import { db, getSetting, setSetting, type Entry, type Movie, type Tombstone } from '../db'
+import { changeCounter, markChanged } from '../data/collection'
 import { downloadPoster } from '../api/tmdb'
 
 const API = 'https://api.github.com'
@@ -18,6 +18,8 @@ export interface Snapshot {
   exportedAt: string
   movies: Omit<Movie, 'posterBlob'>[]
   entries: Entry[]
+  /** Removals, so other devices and merges don't bring them back. Absent in older backups. */
+  deleted?: Tombstone[]
 }
 
 export type BackupErrorKind = 'unauthorized' | 'forbidden' | 'notFound' | 'network' | 'conflict' | 'server' | 'invalid'
@@ -29,10 +31,7 @@ export class BackupError extends Error {
 }
 
 export type BackupStatus =
-  | { state: 'idle' }
-  | { state: 'running' }
-  | { state: 'ok' }
-  | { state: 'error'; kind: BackupErrorKind }
+  { state: 'idle' } | { state: 'running' } | { state: 'ok' } | { state: 'error'; kind: BackupErrorKind }
 
 export const githubConfig = signal<GithubConfig>({ owner: '', repo: 'movie-collection-backup', token: '' })
 export const backupStatus = signal<BackupStatus>({ state: 'idle' })
@@ -59,7 +58,12 @@ export async function saveGithubConfig(config: GithubConfig): Promise<void> {
   await setSetting('github', githubConfig.value)
 }
 
-async function gh(config: GithubConfig, path: string, init: RequestInit = {}, accept = 'application/vnd.github+json'): Promise<Response> {
+async function gh(
+  config: GithubConfig,
+  path: string,
+  init: RequestInit = {},
+  accept = 'application/vnd.github+json'
+): Promise<Response> {
   let res: Response
   try {
     res = await fetch(`${API}${path}`, {
@@ -93,7 +97,13 @@ export async function checkConnection(config = githubConfig.value): Promise<void
   if (repo.permissions && repo.permissions.push === false) throw new BackupError('forbidden')
 }
 
-async function currentSha(config: GithubConfig): Promise<string | undefined> {
+interface RemoteFile {
+  sha: string
+  snapshot: Snapshot
+}
+
+/** Reads collection.json with its sha; undefined when the file doesn't exist yet. */
+async function readRemote(config: GithubConfig): Promise<RemoteFile | undefined> {
   const res = await gh(config, contentsPath(config))
   if (res.status === 404) {
     // Either the file doesn't exist yet or the repo is unreachable; tell them apart.
@@ -101,7 +111,13 @@ async function currentSha(config: GithubConfig): Promise<string | undefined> {
     return undefined
   }
   if (!res.ok) throw new BackupError('server')
-  return ((await res.json()) as { sha: string }).sha
+  const meta = (await res.json()) as { sha: string; content?: string; encoding?: string }
+  // Files over 1 MB come back without inline content; fetch those raw.
+  const text =
+    meta.encoding === 'base64' && meta.content
+      ? fromBase64(meta.content)
+      : await (await gh(config, contentsPath(config), {}, 'application/vnd.github.raw+json')).text()
+  return { sha: meta.sha, snapshot: parseSnapshot(text) }
 }
 
 function toBase64(text: string): string {
@@ -111,21 +127,41 @@ function toBase64(text: string): string {
   return btoa(binary)
 }
 
+function fromBase64(b64: string): string {
+  const binary = atob(b64.replace(/\s/g, ''))
+  return new TextDecoder().decode(Uint8Array.from(binary, (c) => c.charCodeAt(0)))
+}
+
 export async function buildSnapshot(): Promise<Snapshot> {
-  const [movies, entries] = await Promise.all([db.movies.toArray(), db.entries.toArray()])
+  const [movies, entries, deleted] = await Promise.all([
+    db.movies.toArray(),
+    db.entries.toArray(),
+    db.deleted.toArray()
+  ])
   return {
     version: 1,
     exportedAt: new Date().toISOString(),
     movies: movies.map(({ posterBlob: _blob, ...m }) => m),
-    entries
+    entries,
+    deleted
   }
+}
+
+/** Compact JSON keeps the file about a third smaller than an indented one. */
+export function serializeSnapshot(snapshot: Snapshot): string {
+  return JSON.stringify(snapshot)
 }
 
 function commitMessage(snapshot: Snapshot): string {
   const d = new Date(snapshot.exportedAt)
   const pad = (n: number) => String(n).padStart(2, '0')
   const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-  return `Backup: ${date}, ${snapshot.entries.length} фільмів`
+  return `Backup: ${date}, ${pluralUk(snapshot.entries.length, 'фільм', 'фільми', 'фільмів')}`
+}
+
+export function pluralUk(n: number, one: string, few: string, many: string): string {
+  const rule = new Intl.PluralRules('uk').select(n)
+  return `${n} ${rule === 'one' ? one : rule === 'few' ? few : many}`
 }
 
 let running: Promise<void> | null = null
@@ -139,20 +175,29 @@ export function backupNow(): Promise<void> {
     const startedAt = changeCounter.value
     backupStatus.value = { state: 'running' }
     try {
-      const snapshot = await buildSnapshot()
-      const content = toBase64(JSON.stringify(snapshot, null, 2) + '\n')
+      let snapshot: Snapshot
       for (let attempt = 0; ; attempt++) {
-        const sha = await currentSha(config)
+        const remote = await readRemote(config)
+        const knownSha = await getSetting<string>('lastBackupSha')
+        // Another device wrote since our last backup: fold its changes in first.
+        if (remote && remote.sha !== knownSha) await mergeIntoLocal(remote.snapshot)
+        snapshot = await buildSnapshot()
         try {
           const res = await gh(config, contentsPath(config), {
             method: 'PUT',
-            body: JSON.stringify({ message: commitMessage(snapshot), content, ...(sha ? { sha } : {}) })
+            body: JSON.stringify({
+              message: commitMessage(snapshot),
+              content: toBase64(serializeSnapshot(snapshot)),
+              ...(remote ? { sha: remote.sha } : {})
+            })
           })
           if (res.status === 404) throw new BackupError('notFound')
           if (!res.ok) throw new BackupError('server')
+          const written = (await res.json()) as { content?: { sha?: string } }
+          if (written.content?.sha) await setSetting('lastBackupSha', written.content.sha)
           break
         } catch (err) {
-          // Someone else (another device) moved the file: re-read the sha and retry.
+          // The file moved between our read and write: read, merge and try again.
           if (err instanceof BackupError && err.kind === 'conflict' && attempt < 2) continue
           throw err
         }
@@ -186,7 +231,8 @@ let timer: ReturnType<typeof setTimeout> | undefined
 export function startAutoBackup(): void {
   let first = true
   effect(() => {
-    changeCounter.value
+    // Reading the signal subscribes this effect to collection changes.
+    void changeCounter.value
     if (first) {
       first = false
       return
@@ -224,32 +270,66 @@ export function parseSnapshot(text: string): Snapshot {
 }
 
 /**
- * Applies a snapshot. 'replace' wipes the local collection first; 'merge' keeps whichever
- * entry was updated last. Posters are downloaded afterwards in the background.
+ * Folds a snapshot into the local collection: per movie the newest change wins,
+ * and a removal newer than the last edit keeps the movie removed.
  */
-export async function applySnapshot(snapshot: Snapshot, mode: 'merge' | 'replace'): Promise<void> {
-  await db.transaction('rw', db.movies, db.entries, async () => {
-    // Read posters before a replace wipes them, so already-downloaded images survive.
-    const existingMovies = new Map((await db.movies.toArray()).map((m) => [m.tmdbId, m]))
-    if (mode === 'replace') {
-      await db.entries.clear()
-      await db.movies.clear()
+async function mergeIntoLocal(snapshot: Snapshot): Promise<void> {
+  await db.transaction('rw', db.movies, db.entries, db.deleted, async () => {
+    const localEntries = new Map((await db.entries.toArray()).map((e) => [e.tmdbId, e]))
+    const tombstones = new Map((await db.deleted.toArray()).map((d) => [d.tmdbId, d]))
+    for (const d of snapshot.deleted ?? []) {
+      const local = tombstones.get(d.tmdbId)
+      if (!local || local.deletedAt < d.deletedAt) tombstones.set(d.tmdbId, d)
     }
-    const existingEntries = new Map((await db.entries.toArray()).map((e) => [e.tmdbId, e]))
-    for (const movie of snapshot.movies) {
-      const local = existingMovies.get(movie.tmdbId)
-      await db.movies.put({ ...movie, posterBlob: local?.posterBlob })
-    }
-    for (const entry of snapshot.entries) {
-      const local = existingEntries.get(entry.tmdbId)
-      if (!local || local.updatedAt < entry.updatedAt) await db.entries.put(entry)
+    const remoteEntries = new Map(snapshot.entries.map((e) => [e.tmdbId, e]))
+    const remoteMovies = new Map(snapshot.movies.map((m) => [m.tmdbId, m]))
+    const ids = new Set([...localEntries.keys(), ...remoteEntries.keys(), ...tombstones.keys()])
+
+    for (const id of ids) {
+      const local = localEntries.get(id)
+      const remote = remoteEntries.get(id)
+      const newest = !local ? remote : !remote ? local : remote.updatedAt > local.updatedAt ? remote : local
+      const tomb = tombstones.get(id)
+      if (tomb && (!newest || tomb.deletedAt >= newest.updatedAt)) {
+        if (local) {
+          await db.entries.delete(id)
+          await db.movies.delete(id)
+        }
+        await db.deleted.put(tomb)
+        continue
+      }
+      if (tomb) await db.deleted.delete(id)
+      if (!newest) continue
+      if (newest !== local) await db.entries.put(newest)
+      const remoteMovie = remoteMovies.get(id)
+      if (remoteMovie && !(await db.movies.get(id))) await db.movies.put(remoteMovie)
     }
   })
-  if (mode === 'merge') {
-    // The merged result can differ from the backup; push it back.
-    await setSetting('dirty', true)
-    changeCounter.value++
+}
+
+/**
+ * Applies a snapshot from GitHub or a file. 'replace' makes the device match it exactly;
+ * 'merge' combines both sides. Posters are downloaded afterwards in the background.
+ */
+export async function applySnapshot(
+  snapshot: Snapshot,
+  mode: 'merge' | 'replace',
+  options: { markDirty?: boolean } = {}
+): Promise<void> {
+  if (mode === 'replace') {
+    await db.transaction('rw', db.movies, db.entries, db.deleted, async () => {
+      // Keep posters already on the device so they don't need downloading again.
+      const posters = new Map((await db.movies.toArray()).map((m) => [m.tmdbId, m.posterBlob]))
+      await Promise.all([db.entries.clear(), db.movies.clear(), db.deleted.clear()])
+      await db.movies.bulkPut(snapshot.movies.map((m) => ({ ...m, posterBlob: posters.get(m.tmdbId) })))
+      await db.entries.bulkPut(snapshot.entries)
+      await db.deleted.bulkPut(snapshot.deleted ?? [])
+    })
+  } else {
+    await mergeIntoLocal(snapshot)
   }
+  // A merge can differ from the backup, and a file import always may: push the result.
+  if (mode === 'merge' || options.markDirty) await markChanged()
   void fillMissingPosters()
 }
 

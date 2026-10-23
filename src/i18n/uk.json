@@ -2,7 +2,7 @@
   "tabs": {
     "search": "Пошук",
     "collection": "Колекція",
-    "watchlist": "Хочу",
+    "watchlist": "Подивитись",
     "settings": "Налаштування"
   },
   "titles": {
@@ -19,9 +19,13 @@
     "placeholder": "Назва фільму",
     "hint": "Шукай українською або англійською",
     "empty": "Нічого не знайдено",
-    "offline": "Пошук працює лише з інтернетом. Колекція доступна офлайн.",
+    "offline": "Немає інтернету. Показую останні результати, новий пошук запрацює з мережею.",
     "noKey": "Додай ключ TMDB у налаштуваннях, щоб шукати фільми.",
-    "goSettings": "Відкрити налаштування"
+    "goSettings": "Відкрити налаштування",
+    "tooShort": "Введи хоча б 2 символи",
+    "pages": "Сторінки результатів",
+    "prev": "Попередня сторінка",
+    "next": "Наступна сторінка"
   },
   "errors": {
     "unauthorized": "TMDB не прийняв ключ. Перевір його в налаштуваннях.",
@@ -34,13 +38,18 @@
     "language": "Мова",
     "tmdb": "TMDB",
     "tmdbToken": "Read Access Token",
-    "tmdbTokenHint": "Візьми на themoviedb.org → Налаштування → API. Ключ зберігається лише на цьому пристрої.",
+    "tmdbTokenHint": "Потрібен саме API Read Access Token: довгий рядок, що починається з «eyJ». Короткий «API Key» (32 символи) не підійде. Ключ зберігається лише на цьому пристрої.",
     "save": "Зберегти",
     "check": "Перевірити",
     "checking": "Перевіряю…",
     "ok": "Ключ працює",
     "saved": "Збережено",
-    "attribution": "This product uses the TMDB API but is not endorsed or certified by TMDB."
+    "attribution": "This product uses the TMDB API but is not endorsed or certified by TMDB.",
+    "version": "Версія",
+    "tmdbStep1": "Увійди на themoviedb.org і відкрий Налаштування → API.",
+    "tmdbStep2": "Якщо ключа ще немає, натисни «Create», тип Developer, і заповни коротку форму (некомерційне використання).",
+    "tmdbStep3": "Скопіюй «API Read Access Token» і встав сюди.",
+    "wrongKeyType": "Це короткий API Key. Потрібен API Read Access Token з тієї ж сторінки: довгий рядок, що починається з «eyJ»."
   },
   "movie": {
     "watched": "Бачив",
@@ -67,7 +76,14 @@
     "inCollection": "У колекції",
     "saveNote": "Зберегти нотатку",
     "noteSaved": "Нотатку збережено",
-    "done": "Готово"
+    "done": "Готово",
+    "clearHint": "Повторний тап по оцінці знімає її",
+    "moveToWatchlist": "Ще не бачив: перенести в «Подивитись»",
+    "removed": "Фільм видалено",
+    "undo": "Скасувати",
+    "edit": "Змінити",
+    "trailer": "Трейлер",
+    "openYoutube": "Відкрити в YouTube"
   },
   "collection": {
     "search": "Пошук у колекції",
@@ -107,7 +123,9 @@
     "goSearch": "Знайти фільм",
     "watched": "Бачив",
     "rate": "Яка оцінка?",
-    "cancel": "Скасувати"
+    "cancel": "Скасувати",
+    "search": "Пошук у списку",
+    "remove": "Прибрати зі списку"
   },
   "backup": {
     "title": "GitHub бекап",
@@ -158,5 +176,9 @@
     "watchlist": "Хочу подивитись",
     "avg": "Середня оцінка",
     "topGenres": "Улюблені жанри"
+  },
+  "update": {
+    "available": "Доступна нова версія",
+    "reload": "Оновити"
   }
 }

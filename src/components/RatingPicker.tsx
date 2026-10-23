@@ -1,4 +1,4 @@
-export function RatingPicker({ value, onChange }: { value?: number; onChange: (rating: number) => void }) {
+export function RatingPicker({ value, onChange }: { value?: number; onChange: (rating: number | undefined) => void }) {
   return (
     <div class="rating-picker" role="radiogroup">
       {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
@@ -7,7 +7,8 @@ export function RatingPicker({ value, onChange }: { value?: number; onChange: (r
           role="radio"
           aria-checked={value === n}
           class={value === n ? 'active' : value !== undefined && n < value ? 'below' : ''}
-          onClick={() => onChange(n)}
+          // Tapping the current rating again clears it.
+          onClick={() => onChange(value === n ? undefined : n)}
         >
           {n}
         </button>

@@ -19,9 +19,13 @@
     "placeholder": "Movie title",
     "hint": "Search in Ukrainian or English",
     "empty": "Nothing found",
-    "offline": "Search needs an internet connection. Your collection works offline.",
+    "offline": "No internet. Showing the last results; new searches need a connection.",
     "noKey": "Add your TMDB key in Settings to search movies.",
-    "goSettings": "Open Settings"
+    "goSettings": "Open Settings",
+    "tooShort": "Type at least 2 characters",
+    "pages": "Result pages",
+    "prev": "Previous page",
+    "next": "Next page"
   },
   "errors": {
     "unauthorized": "TMDB rejected the key. Check it in Settings.",
@@ -34,13 +38,18 @@
     "language": "Language",
     "tmdb": "TMDB",
     "tmdbToken": "Read Access Token",
-    "tmdbTokenHint": "Get it at themoviedb.org → Settings → API. The key stays on this device only.",
+    "tmdbTokenHint": "You need the API Read Access Token: a long string starting with “eyJ”. The short 32-character “API Key” won't work. The key stays on this device only.",
     "save": "Save",
     "check": "Check",
     "checking": "Checking…",
     "ok": "Key works",
     "saved": "Saved",
-    "attribution": "This product uses the TMDB API but is not endorsed or certified by TMDB."
+    "attribution": "This product uses the TMDB API but is not endorsed or certified by TMDB.",
+    "version": "Version",
+    "tmdbStep1": "Sign in at themoviedb.org and open Settings → API.",
+    "tmdbStep2": "No key yet? Click “Create”, choose Developer, and fill in the short form (non-commercial use).",
+    "tmdbStep3": "Copy the “API Read Access Token” and paste it here.",
+    "wrongKeyType": "That's the short API Key. Use the API Read Access Token from the same page: a long string starting with “eyJ”."
   },
   "movie": {
     "watched": "Watched",
@@ -67,7 +76,14 @@
     "inCollection": "In collection",
     "saveNote": "Save note",
     "noteSaved": "Note saved",
-    "done": "Done"
+    "done": "Done",
+    "clearHint": "Tap the rating again to clear it",
+    "moveToWatchlist": "Not watched yet: move to Watchlist",
+    "removed": "Movie removed",
+    "undo": "Undo",
+    "edit": "Edit",
+    "trailer": "Trailer",
+    "openYoutube": "Open in YouTube"
   },
   "collection": {
     "search": "Search collection",
@@ -105,7 +121,9 @@
     "goSearch": "Find a movie",
     "watched": "Watched",
     "rate": "Your rating?",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "search": "Search watchlist",
+    "remove": "Remove from watchlist"
   },
   "backup": {
     "title": "GitHub backup",
@@ -156,5 +174,9 @@
     "watchlist": "Watchlist",
     "avg": "Average rating",
     "topGenres": "Top genres"
+  },
+  "update": {
+    "available": "A new version is available",
+    "reload": "Update"
   }
 }
