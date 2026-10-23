@@ -1,5 +1,15 @@
 import { expect, test } from '@playwright/test'
-import { mockGithub, mockTmdb, search, setTmdbToken, setupBackup, type FakeRepo } from './mocks'
+import {
+  closeSheet,
+  goTo,
+  mockGithub,
+  mockTmdb,
+  openSearch,
+  search,
+  setTmdbToken,
+  setupBackup,
+  type FakeRepo
+} from './mocks'
 
 test.beforeEach(async ({ context, page }) => {
   await mockTmdb(context)
@@ -8,64 +18,153 @@ test.beforeEach(async ({ context, page }) => {
 })
 
 test('search waits for 2 characters and pages through results', async ({ page }) => {
-  await page.locator('.tab').first().click()
-  await page.fill('input[type=search]', 'a')
+  await openSearch(page)
+  await page.fill('.search-bar input', 'a')
   await expect(page.getByText('Введи хоча б 2 символи')).toBeVisible()
   await search(page, 'ab')
   await expect(page.locator('.result')).toHaveCount(20)
+  await expect(page.locator('.result-count')).toContainText('140')
   await page.getByRole('button', { name: 'Наступна сторінка' }).click()
   await expect(page.locator('.result').first()).toContainText('Фільм 21')
   await expect(page.locator('.pagination [aria-current="page"]')).toHaveText('2')
 })
 
-test('rating collapses to a summary and can be cleared', async ({ page }) => {
+test('search closes back to the section it was opened from', async ({ page }) => {
+  await goTo(page, 'Я')
+  await openSearch(page)
+  await expect(page.locator('.tabbar')).toHaveCount(0)
+  await page.getByRole('button', { name: 'Закрити пошук' }).click()
+  await expect(page.locator('.large-title')).toHaveText('Я')
+})
+
+test('rating: big number with label, date chips, Done collapses to a summary', async ({ page }) => {
   await search(page, 'film')
   await page.locator('.result').first().click()
-  await page.getByRole('button', { name: 'Бачив' }).click()
+  await page.getByRole('button', { name: 'Бачив', exact: true }).click()
+  await expect(page.locator('.rate-big')).toContainText('Обери оцінку')
   await page.locator('.rating-picker button', { hasText: /^8$/ }).click()
+  await expect(page.locator('.rate-big')).toContainText('Дуже добре')
+  await expect(page.getByRole('button', { name: 'Сьогодні' })).toHaveClass(/on/)
+  await page.getByRole('button', { name: 'Вчора' }).click()
+  await expect(page.getByRole('button', { name: 'Вчора' })).toHaveClass(/on/)
+  await page.locator('.entry-note textarea').fill('Класний фільм')
   await page.getByRole('button', { name: 'Готово' }).click()
   await expect(page.locator('.entry-summary')).toContainText('8')
+  await expect(page.locator('.note-card')).toContainText('Класний фільм')
   await page.getByRole('button', { name: 'Змінити' }).click()
   await page.locator('.rating-picker button.active').click()
   await expect(page.locator('.rating-picker button.active')).toHaveCount(0)
 })
 
-test('shows the best trailer at the bottom of the card', async ({ page }) => {
+test('cancelling the rating of a new movie saves nothing', async ({ page }) => {
   await search(page, 'film')
   await page.locator('.result').first().click()
-  const frame = page.locator('.trailer iframe')
-  await expect(frame).toHaveAttribute('src', /youtube-nocookie\.com\/embed\/trailer1/)
+  await page.getByRole('button', { name: 'Бачив', exact: true }).click()
+  await page.getByRole('button', { name: 'Скасувати' }).click()
+  await expect(page.getByRole('button', { name: 'Хочу подивитись' })).toBeVisible()
+  await closeSheet(page)
+  await expect(page.locator('.result').first().locator('.add-btn')).toBeVisible()
+})
+
+test('trailer shows a still and plays on tap', async ({ page }) => {
+  await search(page, 'film')
+  await page.locator('.result').first().click()
+  await expect(page.locator('.trailer-poster img')).toHaveAttribute('src', /i\.ytimg\.com\/vi\/trailer1\//)
+  await page.getByRole('button', { name: 'Відтворити трейлер' }).click()
+  await expect(page.locator('.trailer iframe')).toHaveAttribute('src', /youtube-nocookie\.com\/embed\/trailer1/)
+})
+
+test('plus in search adds to the watchlist, with undo', async ({ page }) => {
+  await search(page, 'film')
+  const first = page.locator('.result').first()
+  await first.getByRole('button', { name: 'Додати в «Подивитись»' }).click()
+  await expect(first.locator('.status-pill')).toHaveText('У списку')
+  await page.locator('.toast button').click()
+  await expect(first.locator('.add-btn')).toBeVisible()
+  await page.locator('.result').nth(1).getByRole('button', { name: 'Додати в «Подивитись»' }).click()
+  await goTo(page, 'Колекція')
+  await page.getByRole('tab', { name: /Подивитись · 1/ }).click()
+  await expect(page.locator('.watch-row')).toHaveCount(1)
 })
 
 test('removing a movie offers undo', async ({ page }) => {
   await search(page, 'film')
   await page.locator('.result').first().click()
-  await page.getByRole('button', { name: 'Бачив' }).click()
+  await page.getByRole('button', { name: 'Бачив', exact: true }).click()
   await page.locator('.rating-picker button', { hasText: /^7$/ }).click()
   await page.getByRole('button', { name: 'Видалити з колекції' }).click()
   await page.locator('.remove-confirm .destructive').click()
   await page.locator('.toast button').click()
-  await page.locator('.tab').nth(1).click()
+  await goTo(page, 'Колекція')
   await expect(page.locator('.poster-tile')).toHaveCount(1)
 })
 
-test('watchlist: mark watched with a rating and remove', async ({ page }) => {
-  for (const n of [1, 2]) {
+test('collection: stats, segments, quick filters and title search', async ({ page }) => {
+  for (const [n, rating] of [
+    [0, 9],
+    [1, 6],
+    [2, 10]
+  ]) {
     await search(page, 'film')
-    await page
-      .locator('.result')
-      .nth(n - 1)
-      .click()
-    await page.getByRole('button', { name: 'Хочу подивитись' }).click()
-    await page.getByRole('button', { name: 'Закрити' }).click()
+    await page.locator('.result').nth(n).click()
+    await page.getByRole('button', { name: 'Бачив', exact: true }).click()
+    await page.locator('.rating-picker button', { hasText: new RegExp(`^${rating}$`) }).click()
+    await closeSheet(page)
   }
-  await page.locator('.tab').nth(2).click()
+  await goTo(page, 'Колекція')
+  await expect(page.locator('.stat-tile').first()).toContainText('3')
+  await expect(page.locator('.stat-tile').nth(1)).toContainText('8,3')
+  await expect(page.locator('.poster-tile')).toHaveCount(3)
+  await page.getByRole('button', { name: '9–10' }).click()
+  await expect(page.locator('.poster-tile')).toHaveCount(2)
+  await page.getByRole('button', { name: '9–10' }).click()
+  await page.getByRole('button', { name: 'Фільтри' }).click()
+  await page.locator('.filter-panel input[type=search]').fill('Фільм 2')
+  await expect(page.locator('.poster-tile')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Скинути' }).click()
+  await expect(page.locator('.poster-tile')).toHaveCount(3)
+  await page.getByRole('tab', { name: /Подивитись · 0/ }).click()
+  await expect(page.getByText('Додавай сюди фільми')).toBeVisible()
+})
+
+test('watchlist: mark watched with a rating and remove', async ({ page }) => {
+  await search(page, 'film')
+  for (const n of [0, 1]) {
+    await page.locator('.result').nth(n).click()
+    await page.getByRole('button', { name: 'Хочу подивитись' }).click()
+    await closeSheet(page)
+  }
+  await goTo(page, 'Колекція')
+  await page.getByRole('tab', { name: /Подивитись/ }).click()
   await expect(page.locator('.watch-row')).toHaveCount(2)
-  await page.getByRole('button', { name: 'Бачив' }).first().click()
+  await page.locator('.watch-row').first().getByRole('button', { name: 'Бачив' }).click()
   await page.locator('.rating-picker button', { hasText: /^9$/ }).click()
   await expect(page.locator('.watch-row')).toHaveCount(1)
   await page.getByRole('button', { name: 'Прибрати зі списку' }).click()
   await expect(page.locator('.watch-row')).toHaveCount(0)
+  await page.getByRole('tab', { name: /Бачив · 1/ }).click()
+  await expect(page.locator('.poster-tile')).toHaveCount(1)
+})
+
+test('Me: rating histogram and favourite genres', async ({ page }) => {
+  await search(page, 'film')
+  for (const n of [0, 1]) {
+    await page.locator('.result').nth(n).click()
+    await page.getByRole('button', { name: 'Бачив', exact: true }).click()
+    await page.locator('.rating-picker button', { hasText: /^8$/ }).click()
+    await closeSheet(page)
+  }
+  await goTo(page, 'Я')
+  await expect(page.locator('.bar.top')).toHaveCount(1)
+  await expect(page.locator('.bar-col').nth(7)).toContainText('2')
+  await expect(page.locator('.meter')).toContainText('Драма')
+})
+
+test('English interface', async ({ page }) => {
+  await goTo(page, 'Я')
+  await page.getByRole('button', { name: 'English' }).click()
+  await expect(page.locator('.tabbar')).toContainText('Collection')
+  await expect(page.locator('.large-title')).toHaveText('Me')
 })
 
 test('backup merges remote changes and keeps deletions', async ({ context, page }) => {
@@ -74,10 +173,10 @@ test('backup merges remote changes and keeps deletions', async ({ context, page 
   await setupBackup(page)
   await search(page, 'film')
   await page.locator('.result').first().click()
-  await page.getByRole('button', { name: 'Бачив' }).click()
+  await page.getByRole('button', { name: 'Бачив', exact: true }).click()
   await page.locator('.rating-picker button', { hasText: /^6$/ }).click()
-  await page.getByRole('button', { name: 'Закрити' }).click()
-  await page.locator('.tab').last().click()
+  await closeSheet(page)
+  await goTo(page, 'Я')
   await page.getByRole('button', { name: 'Зробити бекап зараз' }).click()
   await expect.poll(() => repo.commits.length).toBe(1)
 
@@ -94,17 +193,17 @@ test('backup merges remote changes and keeps deletions', async ({ context, page 
   const merged = JSON.parse(repo.file!)
   expect(merged.entries.map((e: { tmdbId: number }) => e.tmdbId).sort()).toEqual([1, 99])
   expect(merged).not.toHaveProperty('token')
+  expect(repo.file).not.toContain('github_pat')
 
   // Deleting here must win over the older copy still in the remote file.
-  await page.locator('.tab').nth(1).click()
-  await page.locator('.poster-tile', { hasText: 'Фільм 1' }).click()
+  await goTo(page, 'Колекція')
+  await page.getByRole('button', { name: 'Фільм 1', exact: true }).click()
   await page.getByRole('button', { name: 'Видалити з колекції' }).click()
   await page.locator('.remove-confirm .destructive').click()
-  await page.locator('.tab').last().click()
+  await goTo(page, 'Я')
   await page.getByRole('button', { name: 'Зробити бекап зараз' }).click()
   await expect.poll(() => repo.commits.length).toBe(3)
   const afterDelete = JSON.parse(repo.file!)
   expect(afterDelete.entries.map((e: { tmdbId: number }) => e.tmdbId)).toEqual([99])
   expect(afterDelete.deleted.map((d: { tmdbId: number }) => d.tmdbId)).toEqual([1])
-  expect(repo.file).not.toContain('github_pat')
 })

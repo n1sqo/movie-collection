@@ -4,6 +4,7 @@ import { lang, t } from '../i18n'
 import { tmdbToken } from '../settings'
 import { db, type Entry, type Movie } from '../db'
 import { getMovieDetails, TmdbError } from '../api/tmdb'
+import { displayGenres } from '../data/query'
 import {
   moveToWatchlist,
   removeFromCollection,
@@ -126,46 +127,66 @@ function MovieSheet({ id, preview, onClose }: { id: number; preview?: SheetPrevi
   return (
     <div class="sheet-backdrop">
       <div class="sheet" role="dialog" aria-modal="true" aria-label={primary} ref={swipe.sheet} {...swipe.handlers}>
-        <div class="sheet-grabber" aria-hidden="true" />
-        <div class="sheet-header">
-          <button class="link" onClick={onClose}>
-            {t('movie.close')}
-          </button>
-        </div>
         <div class="sheet-body" ref={swipe.body}>
-          <div class="movie-hero">
-            {posterUrl ? <img class="hero-poster" src={posterUrl} alt="" /> : <div class="hero-poster placeholder" />}
-            <div class="hero-text">
-              <h2 class="movie-title">{primary}</h2>
-              {secondary && secondary !== primary && <div class="movie-sub">{secondary}</div>}
-              {original && original !== titleUk && original !== titleEn && <div class="movie-sub">{original}</div>}
-              <div class="movie-meta">
-                {[movie?.year || preview?.year, movie?.runtime ? `${movie.runtime} ${t('movie.min')}` : '']
-                  .filter(Boolean)
-                  .join(' · ')}
-              </div>
-              {movie && movie.tmdbRating > 0 && (
-                <div class="tmdb-rating">
-                  {t('movie.tmdbRating')} <b>{movie.tmdbRating.toFixed(1)}</b>
-                </div>
-              )}
-            </div>
+          <div class="sheet-hero" aria-hidden="true">
+            {posterUrl && <img src={posterUrl} alt="" />}
           </div>
+          <div class="sheet-grabber" aria-hidden="true" />
+          <button class="round-btn sheet-close" aria-label={t('movie.close')} onClick={onClose}>
+            <svg
+              viewBox="0 0 24 24"
+              width="16"
+              height="16"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
+          </button>
+          <div class="sheet-content">
+            <div class="movie-hero">
+              {posterUrl ? <img class="hero-poster" src={posterUrl} alt="" /> : <div class="hero-poster placeholder" />}
+              <div class="hero-text">
+                <h2 class="movie-title">{primary}</h2>
+                {secondary && secondary !== primary && <div class="movie-sub">{secondary}</div>}
+                {original && original !== titleUk && original !== titleEn && <div class="movie-sub">{original}</div>}
+                <div class="movie-meta">
+                  {[
+                    movie?.year || preview?.year,
+                    movie?.runtime ? formatRuntime(movie.runtime) : '',
+                    movie ? (displayGenres(movie, lang.value)[0] ?? '') : ''
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </div>
+              </div>
+            </div>
 
-          {movie && entry !== undefined && <EntryEditor movie={movie} entry={entry} />}
+            {movie && entry !== undefined && <EntryEditor movie={movie} entry={entry} />}
 
-          {!movie && !error && <div class="spinner" aria-busy="true" />}
-          {error && !movie && <p class="notice error">{error}</p>}
+            {!movie && !error && <div class="spinner" aria-busy="true" />}
+            {error && !movie && <p class="notice error">{error}</p>}
 
-          {movie && <MovieDetails movie={movie} />}
+            <Trailer tmdbId={id} />
 
-          <Trailer tmdbId={id} />
+            {movie && <MovieDetails movie={movie} />}
 
-          {entry && <RemoveButton tmdbId={id} onRemoved={onClose} />}
+            {entry && <RemoveButton tmdbId={id} onRemoved={onClose} />}
+          </div>
         </div>
       </div>
     </div>
   )
+}
+
+function formatRuntime(min: number): string {
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  if (!h) return `${m} ${t('movie.min')}`
+  return m ? `${h} ${t('movie.hours')} ${m} ${t('movie.min')}` : `${h} ${t('movie.hours')}`
 }
 
 function MovieDetails({ movie }: { movie: Movie }) {
@@ -185,19 +206,19 @@ function MovieDetails({ movie }: { movie: Movie }) {
       )}
       {overview && (
         <section>
-          <h3>{t('movie.overview')}</h3>
+          <h2 class="section-h">{t('movie.overview')}</h2>
           <p>{overview}</p>
         </section>
       )}
       {movie.directors.length > 0 && (
         <section>
-          <h3>{t('movie.director')}</h3>
+          <h2 class="section-h">{t('movie.director')}</h2>
           <p>{movie.directors.join(', ')}</p>
         </section>
       )}
       {movie.cast.length > 0 && (
         <section>
-          <h3>{t('movie.cast')}</h3>
+          <h2 class="section-h">{t('movie.cast')}</h2>
           <ul class="cast">
             {movie.cast.map((c) => (
               <li key={c.name + c.character}>
@@ -212,139 +233,185 @@ function MovieDetails({ movie }: { movie: Movie }) {
   )
 }
 
+function yesterday(): string {
+  const d = new Date()
+  d.setDate(d.getDate() - 1)
+  return d.toLocaleDateString('sv-SE')
+}
+
 function EntryEditor({ movie, entry }: { movie: Movie; entry: Entry | null }) {
-  const [pickingRating, setPickingRating] = useState(false)
-  // A just-rated movie opens the details editor; an already-rated one shows a compact summary.
+  // Rating panel open; an already-rated movie shows a compact summary until «Змінити».
   const [editing, setEditing] = useState(false)
-  const [noteSaved, setNoteSaved] = useState(false)
-  const [note, setNote] = useState(entry?.note ?? '')
 
-  useEffect(() => setNote(entry?.note ?? ''), [entry?.note])
-
-  if (!entry) {
-    if (pickingRating) {
-      return (
-        <div class="entry-box">
-          <div class="entry-label">{t('movie.chooseRating')}</div>
-          <RatingPicker
-            onChange={(myRating) => {
-              if (!myRating) return
-              setEditing(true)
-              void saveToCollection(movie, { status: 'watched', myRating, watchedAt: today() })
-            }}
-          />
-          <button class="link" onClick={() => setPickingRating(false)}>
-            {t('movie.cancel')}
-          </button>
-        </div>
-      )
-    }
+  if (!entry && !editing) {
     return (
       <div class="entry-actions">
-        <button class="btn primary" onClick={() => setPickingRating(true)}>
+        <button class="btn primary big" onClick={() => setEditing(true)}>
           {t('movie.watched')}
         </button>
-        <button class="btn" onClick={() => saveToCollection(movie, { status: 'watchlist' })}>
+        <button class="btn big" onClick={() => saveToCollection(movie, { status: 'watchlist' })}>
           {t('movie.wantToWatch')}
         </button>
       </div>
     )
   }
 
-  if (entry.status === 'watchlist') {
+  if (entry?.status === 'watchlist' && !editing) {
     return (
       <div class="entry-box">
         <div class="entry-label">{t('movie.inWatchlist')}</div>
-        {pickingRating ? (
-          <>
-            <div class="entry-label">{t('movie.chooseRating')}</div>
-            <RatingPicker
-              onChange={(myRating) => {
-                if (!myRating) return
-                setEditing(true)
-                void updateEntry(movie.tmdbId, { status: 'watched', myRating, watchedAt: today() })
-              }}
-            />
-          </>
-        ) : (
-          <button class="btn primary" onClick={() => setPickingRating(true)}>
-            {t('movie.markWatched')}
-          </button>
-        )}
-      </div>
-    )
-  }
-
-  const noteChanged = note !== (entry.note ?? '')
-  const saveNote = () => updateEntry(movie.tmdbId, { note: note.trim() || undefined }).then(() => setNoteSaved(true))
-
-  if (!editing) {
-    return (
-      <div class="entry-box entry-summary">
-        <div class="summary-rating" aria-label={t('movie.myRating')}>
-          {entry.myRating ?? '–'}
-          <span>/10</span>
-        </div>
-        <div class="summary-text">
-          <div class="entry-label">{t('movie.myRating')}</div>
-          {entry.watchedAt && <div class="summary-date">{formatDate(entry.watchedAt)}</div>}
-          {entry.note && <div class="summary-note">{entry.note}</div>}
-        </div>
-        <button class="btn small" onClick={() => setEditing(true)}>
-          {t('movie.edit')}
+        <button class="btn primary big wide" onClick={() => setEditing(true)}>
+          {t('movie.markWatched')}
         </button>
       </div>
     )
   }
+
+  if (entry?.status === 'watched' && !editing) {
+    const tmdb = movie.tmdbRating > 0 ? movie.tmdbRating : undefined
+    return (
+      <>
+        <div class="entry-box entry-summary">
+          <div class="summary-rating" aria-label={t('movie.myRating')}>
+            {entry.myRating ?? '–'}
+            <span>/10</span>
+          </div>
+          <div class="summary-text">
+            <div class="summary-date">
+              {entry.watchedAt ? `${t('movie.watchedOn')} ${formatDate(entry.watchedAt)}` : t('movie.watched')}
+            </div>
+            {tmdb !== undefined && (
+              <div class="summary-sub">
+                TMDB {tmdb.toLocaleString(lang.value === 'uk' ? 'uk-UA' : 'en-US', { maximumFractionDigits: 1 })}
+                {entry.myRating !== undefined && entry.myRating !== Math.round(tmdb) && (
+                  <> · {t(entry.myRating > tmdb ? 'movie.higherThanTmdb' : 'movie.lowerThanTmdb')}</>
+                )}
+              </div>
+            )}
+          </div>
+          <button class="btn small" onClick={() => setEditing(true)}>
+            {t('movie.edit')}
+          </button>
+        </div>
+        {entry.note && (
+          <div class="note-card">
+            <div class="entry-label">{t('movie.myNote')}</div>
+            {entry.note}
+          </div>
+        )}
+      </>
+    )
+  }
+
+  return <RatePanel movie={movie} entry={entry} onDone={() => setEditing(false)} />
+}
+
+/** Big number, ten large buttons, date in one tap, a note and «Готово». */
+function RatePanel({ movie, entry, onDone }: { movie: Movie; entry: Entry | null; onDone: () => void }) {
+  const [note, setNote] = useState(entry?.note ?? '')
+  const [noteSaved, setNoteSaved] = useState(false)
+  const [otherDate, setOtherDate] = useState(false)
+  useEffect(() => setNote(entry?.note ?? ''), [entry?.note])
+
+  const watched = entry?.status === 'watched'
+  const rating = watched ? entry?.myRating : undefined
+
+  const setRating = (myRating: number | undefined) => {
+    if (watched) return updateEntry(movie.tmdbId, { myRating })
+    if (!myRating) return
+    // The first tap marks the movie as watched today.
+    if (entry) return updateEntry(movie.tmdbId, { status: 'watched', myRating, watchedAt: today() })
+    return saveToCollection(movie, { status: 'watched', myRating, watchedAt: today() })
+  }
+  const setDate = (watchedAt: string | undefined) => watched && updateEntry(movie.tmdbId, { watchedAt })
+
+  const noteChanged = note !== (entry?.note ?? '')
+  const saveNote = () =>
+    entry ? updateEntry(movie.tmdbId, { note: note.trim() || undefined }).then(() => setNoteSaved(true)) : undefined
+
+  const dateKind = !entry?.watchedAt
+    ? undefined
+    : entry.watchedAt === today()
+      ? 'today'
+      : entry.watchedAt === yesterday()
+        ? 'yesterday'
+        : 'other'
 
   return (
-    <div class="entry-box">
-      <div class="entry-label">{t('movie.myRating')}</div>
-      <RatingPicker value={entry.myRating} onChange={(myRating) => updateEntry(movie.tmdbId, { myRating })} />
-      <p class="hint">{t('movie.clearHint')}</p>
-      <label class="entry-row">
-        <span>{t('movie.watchedAt')}</span>
-        <input
-          type="date"
-          value={entry.watchedAt ?? ''}
-          max={today()}
-          onChange={(e) => updateEntry(movie.tmdbId, { watchedAt: e.currentTarget.value || undefined })}
-        />
-      </label>
-      <label class="entry-note">
-        <span>{t('movie.note')}</span>
-        <textarea
-          rows={3}
-          placeholder={t('movie.notePlaceholder')}
-          value={note}
-          onInput={(e) => {
-            setNote(e.currentTarget.value)
-            setNoteSaved(false)
-          }}
-          // Closing the sheet or tapping elsewhere still keeps what was typed.
-          onBlur={() => noteChanged && saveNote()}
-        />
-      </label>
-      {noteChanged ? (
-        <button class="btn note-save" onClick={saveNote}>
-          {t('movie.saveNote')}
-        </button>
-      ) : (
-        noteSaved && <p class="status ok note-status">{t('movie.noteSaved')}</p>
+    <div class="entry-box rate-panel">
+      <div class="rate-big" aria-live="polite">
+        <b class={rating ? '' : 'empty'}>{rating ?? '–'}</b>
+        <span>{rating ? t(`movie.ratingLabels.${rating}`) : t('movie.chooseRating')}</span>
+      </div>
+      <RatingPicker value={rating} onChange={setRating} />
+      {watched && <p class="hint">{t('movie.clearHint')}</p>}
+
+      {watched && (
+        <div class="rate-section">
+          <div class="entry-label">{t('movie.watchedAt')}</div>
+          <div class="chip-row wrap">
+            <button class={dateKind === 'today' ? 'chip on' : 'chip'} onClick={() => setDate(today())}>
+              {t('movie.today')}
+            </button>
+            <button class={dateKind === 'yesterday' ? 'chip on' : 'chip'} onClick={() => setDate(yesterday())}>
+              {t('movie.yesterday')}
+            </button>
+            <button class={dateKind === 'other' || otherDate ? 'chip on' : 'chip'} onClick={() => setOtherDate(true)}>
+              {dateKind === 'other' && entry?.watchedAt ? formatDate(entry.watchedAt) : t('movie.otherDate')}
+            </button>
+          </div>
+          {otherDate && (
+            <input
+              class="date-input"
+              type="date"
+              aria-label={t('movie.watchedAt')}
+              value={entry?.watchedAt ?? ''}
+              max={today()}
+              onChange={(e) => setDate(e.currentTarget.value || undefined)}
+            />
+          )}
+        </div>
       )}
-      <button
-        class="btn primary done"
-        onClick={async () => {
-          if (noteChanged) await saveNote()
-          setNoteSaved(false)
-          setEditing(false)
-        }}
-      >
-        {t('movie.done')}
-      </button>
-      <button class="link move-back" onClick={() => moveToWatchlist(movie.tmdbId)}>
-        {t('movie.moveToWatchlist')}
-      </button>
+
+      {watched && (
+        <label class="entry-note">
+          <span class="entry-label">{t('movie.note')}</span>
+          <textarea
+            rows={2}
+            placeholder={t('movie.notePlaceholder')}
+            value={note}
+            onInput={(e) => {
+              setNote(e.currentTarget.value)
+              setNoteSaved(false)
+            }}
+            // Closing the sheet or tapping elsewhere still keeps what was typed.
+            onBlur={() => noteChanged && saveNote()}
+          />
+        </label>
+      )}
+      {noteSaved && !noteChanged && <p class="status ok note-status">{t('movie.noteSaved')}</p>}
+
+      {watched ? (
+        <>
+          <button
+            class="btn primary big wide done"
+            onClick={async () => {
+              if (noteChanged) await saveNote()
+              setOtherDate(false)
+              onDone()
+            }}
+          >
+            {t('movie.done')}
+          </button>
+          <button class="link move-back" onClick={() => moveToWatchlist(movie.tmdbId).then(onDone)}>
+            {t('movie.moveToWatchlist')}
+          </button>
+        </>
+      ) : (
+        <button class="link move-back" onClick={onDone}>
+          {t('movie.cancel')}
+        </button>
+      )}
     </div>
   )
 }

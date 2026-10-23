@@ -56,6 +56,7 @@ export async function mockTmdb(ctx: BrowserContext) {
   await ctx.route('https://image.tmdb.org/**', (route) =>
     route.fulfill({ body: PNG, contentType: 'image/png', headers: { 'access-control-allow-origin': '*' } })
   )
+  await ctx.route('https://i.ytimg.com/**', (route) => route.fulfill({ body: PNG, contentType: 'image/png' }))
   await ctx.route('https://www.youtube-nocookie.com/**', (route) => route.fulfill({ body: '<html></html>' }))
 }
 
@@ -93,22 +94,35 @@ export async function mockGithub(ctx: BrowserContext, repo: FakeRepo) {
   })
 }
 
+export async function goTo(page: Page, section: 'Колекція' | 'Я') {
+  if (await page.locator('.search-bar').isVisible()) await page.getByRole('button', { name: 'Закрити пошук' }).click()
+  await page.locator('.tabbar').getByRole('button', { name: section, exact: true }).click()
+}
+
+export async function closeSheet(page: Page) {
+  await page.getByRole('button', { name: 'Закрити', exact: true }).click()
+}
+
 export async function setTmdbToken(page: Page) {
-  await page.locator('.tab').last().click()
+  await goTo(page, 'Я')
   await page.locator('input[type=password]').first().fill(TMDB_TOKEN)
   await page.getByRole('button', { name: 'Зберегти' }).first().click()
 }
 
 export async function setupBackup(page: Page) {
-  await page.locator('.tab').last().click()
+  await goTo(page, 'Я')
   const inputs = page.locator('.group.stack input')
   await inputs.nth(0).fill('me')
   await inputs.nth(2).fill(GH_TOKEN)
   await page.locator('.group.stack').getByRole('button', { name: 'Зберегти' }).click()
 }
 
+export async function openSearch(page: Page) {
+  if (!(await page.locator('.search-bar').isVisible())) await page.getByRole('button', { name: 'Пошук фільму' }).click()
+}
+
 export async function search(page: Page, query: string) {
-  await page.locator('.tab').first().click()
-  await page.fill('input[type=search]', query)
+  await openSearch(page)
+  await page.fill('.search-bar input', query)
   await page.locator('.result').first().waitFor()
 }

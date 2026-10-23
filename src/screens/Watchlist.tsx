@@ -3,13 +3,12 @@ import { lang, t, tn } from '../i18n'
 import { db } from '../db'
 import { useLiveQuery } from '../useLiveQuery'
 import { usePosterUrl } from '../usePosterUrl'
-import { Screen } from '../components/Screen'
 import { RatingPicker } from '../components/RatingPicker'
 import { openMovie } from '../components/MovieSheet'
 import { showToast } from '../components/Toast'
 import { removeFromCollection, today, undoRemove, updateEntry } from '../data/collection'
 import { applyQuery, displayTitle, emptyFilters, type Item, type SortKey } from '../data/query'
-import { tab } from '../app'
+import { goTo } from '../app'
 
 const SORT_KEYS: SortKey[] = ['addedAt', 'tmdbRating', 'year', 'title']
 const PREFS_KEY = 'watchlist-view'
@@ -28,7 +27,8 @@ async function loadWatchlist(): Promise<Item[]> {
   return entries.flatMap((entry, i) => (movies[i] ? [{ entry, movie: movies[i]! }] : []))
 }
 
-export function Watchlist() {
+/** The «Подивитись» half of the collection screen. */
+export function WatchlistBody() {
   const items = useLiveQuery(loadWatchlist)
   const [rating, setRating] = useState<number | null>(null)
   const [text, setText] = useState('')
@@ -46,20 +46,18 @@ export function Watchlist() {
 
   if (items && items.length === 0) {
     return (
-      <Screen title={t('titles.watchlist')}>
-        <div class="notice">
-          <p class="muted">{t('watchlist.empty')}</p>
-          <button class="btn" onClick={() => (tab.value = 'search')}>
-            {t('watchlist.goSearch')}
-          </button>
-        </div>
-      </Screen>
+      <div class="notice">
+        <p class="muted">{t('watchlist.empty')}</p>
+        <button class="btn primary" onClick={() => goTo('search')}>
+          {t('watchlist.goSearch')}
+        </button>
+      </div>
     )
   }
 
   return (
-    <Screen title={t('titles.watchlist')}>
-      <div class="search-field">
+    <>
+      <div class="search-field inline">
         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
           <path
             fill="currentColor"
@@ -80,8 +78,8 @@ export function Watchlist() {
           </button>
         )}
       </div>
-      <div class="toolbar">
-        <label class="sort-select">
+      <div class="chip-row">
+        <label class="chip sort-chip">
           <span class="sr-only">{t('collection.sort')}</span>
           <select value={prefs.sort} onChange={(e) => setPrefs({ ...prefs, sort: e.currentTarget.value as SortKey })}>
             {SORT_KEYS.map((key) => (
@@ -92,16 +90,16 @@ export function Watchlist() {
           </select>
         </label>
         <button
-          class="icon-btn"
+          class="chip icon-chip"
           aria-label={prefs.asc ? t('collection.asc') : t('collection.desc')}
           onClick={() => setPrefs({ ...prefs, asc: !prefs.asc })}
         >
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" class={prefs.asc ? 'flip' : ''}>
+          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" class={prefs.asc ? 'flip' : ''}>
             <path fill="currentColor" d="M11 4h2v12.2l4.6-4.6 1.4 1.4-7 7-7-7 1.4-1.4 4.6 4.6V4Z" />
           </svg>
         </button>
       </div>
-      {items && <div class="collection-count">{tn('collection.count', visible.length)}</div>}
+      {text && <div class="collection-count">{tn('collection.count', visible.length)}</div>}
       {items && visible.length === 0 && <p class="notice muted">{t('collection.noMatch')}</p>}
       <ul class="results">
         {visible.map((item) => (
@@ -113,7 +111,7 @@ export function Watchlist() {
           />
         ))}
       </ul>
-    </Screen>
+    </>
   )
 }
 

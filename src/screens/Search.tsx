@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'preact/hooks'
+import { useEffect, useRef, useState } from 'preact/hooks'
 import { lang, t } from '../i18n'
 import { tmdbToken } from '../settings'
 import { online } from '../useOnline'
-import { posterUrl, searchMovies, TmdbError, type SearchPage, type SearchResult } from '../api/tmdb'
+import { getMovieDetails, posterUrl, searchMovies, TmdbError, type SearchPage, type SearchResult } from '../api/tmdb'
 import { Screen } from '../components/Screen'
-import { tab } from '../app'
+import { closeSearch, goTo } from '../app'
+import { searchIcon } from '../components/TabBar'
+import { showToast } from '../components/Toast'
+import { removeFromCollection, saveToCollection } from '../data/collection'
 import { openMovie } from '../components/MovieSheet'
 import { db } from '../db'
 import { useLiveQuery } from '../useLiveQuery'
@@ -75,30 +78,71 @@ export function Search() {
 
   return (
     <Screen title={t('titles.search')}>
-      <div class="search-field">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path
-            fill="currentColor"
-            d="M10.5 3a7.5 7.5 0 0 1 5.9 12.1l4.2 4.2-1.4 1.4-4.2-4.2A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"
-          />
-        </svg>
+      {state.kind === 'done' && state.query === query.trim() && state.data.totalResults > 0 && (
+        <p class="result-count">
+          {t('search.count').replace('{n}', String(state.data.totalResults)).replace('{q}', state.query)}
+        </p>
+      )}
+      <SearchBody state={state} query={query} page={page} onPage={setPage} />
+      <SearchBar query={query} onQuery={setQuery} />
+    </Screen>
+  )
+}
+
+/** Search field at the bottom, above the keyboard when it is open. */
+function SearchBar({ query, onQuery }: { query: string; onQuery: (q: string) => void }) {
+  const bar = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const place = () => {
+      const keyboard = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
+      bar.current?.style.setProperty('--keyboard', `${keyboard}px`)
+    }
+    place()
+    vv.addEventListener('resize', place)
+    vv.addEventListener('scroll', place)
+    return () => {
+      vv.removeEventListener('resize', place)
+      vv.removeEventListener('scroll', place)
+    }
+  }, [])
+  return (
+    <div class="search-bar" ref={bar}>
+      <div class="search-field floating">
+        {searchIcon(20)}
         <input
           type="search"
           enterkeyhint="search"
           autocomplete="off"
+          aria-label={t('search.placeholder')}
           placeholder={t('search.placeholder')}
           value={query}
-          onInput={(e) => setQuery(e.currentTarget.value)}
+          autoFocus={!query}
+          onInput={(e) => onQuery(e.currentTarget.value)}
           onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
         />
         {query && (
-          <button class="clear" aria-label="clear" onClick={() => setQuery('')}>
+          <button class="clear" aria-label={t('search.clear')} onClick={() => onQuery('')}>
             ×
           </button>
         )}
       </div>
-      <SearchBody state={state} query={query} page={page} onPage={setPage} />
-    </Screen>
+      <button class="round-btn big" aria-label={t('search.close')} onClick={closeSearch}>
+        <svg
+          viewBox="0 0 24 24"
+          width="18"
+          height="18"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
   )
 }
 
@@ -117,7 +161,7 @@ function SearchBody({
     return (
       <div class="notice">
         <p>{t('search.noKey')}</p>
-        <button class="btn" onClick={() => (tab.value = 'settings')}>
+        <button class="btn primary" onClick={() => goTo('me')}>
           {t('search.goSettings')}
         </button>
       </div>
@@ -236,7 +280,7 @@ function Results({ results }: { results: SearchResult[] }) {
               {extra && <div class="result-sub">{extra}</div>}
               {m.year && <div class="result-year">{m.year}</div>}
             </div>
-            <ResultBadge entry={statusById.get(m.id)} />
+            <ResultStatus id={m.id} entry={statusById.get(m.id)} />
           </li>
         )
       })}
@@ -244,20 +288,58 @@ function Results({ results }: { results: SearchResult[] }) {
   )
 }
 
-function ResultBadge({ entry }: { entry?: { status: string; myRating?: number } }) {
-  if (!entry) return null
-  if (entry.status === 'watchlist') {
+function ResultStatus({ id, entry }: { id: number; entry?: { status: string; myRating?: number } }) {
+  const [busy, setBusy] = useState(false)
+  if (entry?.status === 'watchlist') return <span class="status-pill">{t('search.inList')}</span>
+  if (entry) {
     return (
-      <span class="result-badge watchlist" aria-label={t('movie.inWatchlist')}>
-        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-          <path fill="currentColor" d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z" />
+      <span class="status-pill rated" aria-label={t('movie.inCollection')}>
+        <svg
+          viewBox="0 0 24 24"
+          width="14"
+          height="14"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <path d="M5 12l5 5 9-10" />
         </svg>
+        {entry.myRating ?? ''}
       </span>
     )
   }
+  async function add(e: Event) {
+    e.stopPropagation()
+    setBusy(true)
+    try {
+      const movie = await getMovieDetails(tmdbToken.value, id)
+      await saveToCollection(movie, { status: 'watchlist' })
+      showToast(t('search.added'), {
+        label: t('movie.undo'),
+        run: () => void removeFromCollection(id)
+      })
+    } catch (err) {
+      showToast(t(`errors.${err instanceof TmdbError ? err.kind : 'network'}`))
+    } finally {
+      setBusy(false)
+    }
+  }
   return (
-    <span class="result-badge" aria-label={t('movie.inCollection')}>
-      {entry.myRating ?? '✓'}
-    </span>
+    <button class="add-btn" aria-label={t('search.addToWatchlist')} disabled={busy || !online.value} onClick={add}>
+      <svg
+        viewBox="0 0 24 24"
+        width="20"
+        height="20"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        aria-hidden="true"
+      >
+        <path d="M12 5v14M5 12h14" />
+      </svg>
+    </button>
   )
 }

@@ -3,6 +3,7 @@ import { App } from './app'
 import { loadSettings } from './settings'
 import { loadBackupSettings, startAutoBackup } from './backup/github'
 import { startUpdateCheck } from './update'
+import '@fontsource-variable/inter/wght.css'
 import './styles.css'
 
 if (navigator.storage?.persist) navigator.storage.persist().catch(() => {})

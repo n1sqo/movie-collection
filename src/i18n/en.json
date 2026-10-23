@@ -1,15 +1,16 @@
 {
   "tabs": {
-    "search": "Search",
+    "search": "Find a movie",
     "collection": "Collection",
-    "watchlist": "Watchlist",
-    "settings": "Settings"
+    "label": "Sections",
+    "me": "Me"
   },
   "titles": {
     "search": "Search",
-    "collection": "My Collection",
+    "collection": "Collection",
     "watchlist": "Watchlist",
-    "settings": "Settings"
+    "settings": "Settings",
+    "me": "Me"
   },
   "placeholder": {
     "soon": "Coming soon"
@@ -25,7 +26,13 @@
     "tooShort": "Type at least 2 characters",
     "pages": "Result pages",
     "prev": "Previous page",
-    "next": "Next page"
+    "next": "Next page",
+    "count": "Results for “{q}”: {n}",
+    "clear": "Clear",
+    "close": "Close search",
+    "inList": "On list",
+    "added": "Added to Watchlist",
+    "addToWatchlist": "Add to Watchlist"
   },
   "errors": {
     "unauthorized": "TMDB rejected the key. Check it in Settings.",
@@ -83,7 +90,28 @@
     "undo": "Undo",
     "edit": "Edit",
     "trailer": "Trailer",
-    "openYoutube": "Open in YouTube"
+    "openYoutube": "Open in YouTube",
+    "hours": "h",
+    "watchedOn": "Watched",
+    "higherThanTmdb": "you rated it higher",
+    "lowerThanTmdb": "you rated it lower",
+    "myNote": "My note",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "otherDate": "Other date",
+    "playTrailer": "Play trailer",
+    "ratingLabels": {
+      "1": "Awful",
+      "2": "Awful",
+      "3": "Bad",
+      "4": "Bad",
+      "5": "Meh",
+      "6": "Okay",
+      "7": "Good",
+      "8": "Very good",
+      "9": "Great",
+      "10": "Masterpiece"
+    }
   },
   "collection": {
     "search": "Search collection",
@@ -94,7 +122,7 @@
       "one": "{n} movie",
       "other": "{n} movies"
     },
-    "empty": "Movies you mark as Watched will show up here.",
+    "empty": "Your collection is empty. Find a movie and mark it Watched or add it to your watchlist.",
     "goSearch": "Find a movie",
     "noMatch": "Nothing matches the filters",
     "genre": "Genre",
@@ -114,7 +142,14 @@
       "watchedAt": "Date watched",
       "title": "Title",
       "addedAt": "Date added"
-    }
+    },
+    "view": "List",
+    "views": {
+      "watched": "Watched",
+      "watchlist": "Watchlist"
+    },
+    "titleFilter": "Title",
+    "emptyWatched": "Movies you mark as Watched will show up here."
   },
   "watchlist": {
     "empty": "Add movies here from Search with “Want to watch”.",
@@ -173,7 +208,12 @@
     "watched": "Watched",
     "watchlist": "Watchlist",
     "avg": "Average rating",
-    "topGenres": "Top genres"
+    "topGenres": "Top genres",
+    "watchedShort": "watched",
+    "avgShort": "average rating",
+    "thisYear": "this year",
+    "ratings": "My ratings",
+    "ratingsAria": "Rating distribution, most common {n}"
   },
   "update": {
     "available": "A new version is available",

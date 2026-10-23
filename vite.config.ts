@@ -22,8 +22,8 @@ export default defineConfig({
         start_url: '/movie-collection/',
         scope: '/movie-collection/',
         display: 'standalone',
-        background_color: '#000000',
-        theme_color: '#000000',
+        background_color: '#0b0b0f',
+        theme_color: '#0b0b0f',
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
@@ -31,7 +31,11 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,json}'],
+        // Only the font subsets the UI needs (Ukrainian + English) go offline.
+        globPatterns: [
+          '**/*.{js,css,html,svg,png,json}',
+          '**/inter-{latin,latin-ext,cyrillic,cyrillic-ext}-wght-*.woff2'
+        ],
         navigateFallback: '/movie-collection/index.html',
         runtimeCaching: [
           {

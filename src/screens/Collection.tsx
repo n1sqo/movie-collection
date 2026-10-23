@@ -1,3 +1,4 @@
+import { signal } from '@preact/signals'
 import { useMemo, useState } from 'preact/hooks'
 import { lang, t, tn } from '../i18n'
 import { db } from '../db'
@@ -5,7 +6,8 @@ import { useLiveQuery } from '../useLiveQuery'
 import { usePosterUrl } from '../usePosterUrl'
 import { Screen } from '../components/Screen'
 import { openMovie } from '../components/MovieSheet'
-import { tab } from '../app'
+import { goTo } from '../app'
+import { WatchlistBody } from './Watchlist'
 import {
   activeFilterCount,
   applyQuery,
@@ -42,11 +44,18 @@ async function loadWatched(): Promise<Item[]> {
   return entries.flatMap((entry, i) => (movies[i] ? [{ entry, movie: movies[i]! }] : []))
 }
 
+export type CollectionView = 'watched' | 'watchlist'
+export const collectionView = signal<CollectionView>('watched')
+
+const thisYear = () => String(new Date().getFullYear())
+
 export function Collection() {
   const items = useLiveQuery(loadWatched)
+  const watchlistCount = useLiveQuery(() => db.entries.where('status').equals('watchlist').count())
   const [prefs, setPrefsState] = useState(loadPrefs)
   const [filters, setFiltersState] = useState(sessionFilters)
   const [showFilters, setShowFilters] = useState(false)
+  const view = collectionView.value
 
   const setPrefs = (next: ViewPrefs) => {
     setPrefsState(next)
@@ -63,14 +72,25 @@ export function Collection() {
     () => (items ? applyQuery(items, filters, prefs.sort, prefs.asc, lang.value) : []),
     [items, filters, prefs, lang.value]
   )
-  const filterCount = activeFilterCount(filters)
+  const topGenres = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const { movie } of items ?? [])
+      for (const g of displayGenres(movie, lang.value)) counts.set(g, (counts.get(g) ?? 0) + 1)
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([g]) => g)
+  }, [items, lang.value])
+  const filterCount = activeFilterCount(filters) + (filters.text ? 1 : 0)
 
-  if (items && items.length === 0) {
+  if (items === undefined || watchlistCount === undefined) return <Screen title={t('titles.collection')} />
+
+  if (items.length === 0 && watchlistCount === 0) {
     return (
       <Screen title={t('titles.collection')}>
         <div class="notice">
           <p class="muted">{t('collection.empty')}</p>
-          <button class="btn" onClick={() => (tab.value = 'search')}>
+          <button class="btn primary" onClick={() => goTo('search')}>
             {t('collection.goSearch')}
           </button>
         </div>
@@ -78,75 +98,144 @@ export function Collection() {
     )
   }
 
+  const rated = items.filter((i) => i.entry.myRating !== undefined)
+  const avg = rated.length ? rated.reduce((s, i) => s + i.entry.myRating!, 0) / rated.length : undefined
+  const year = thisYear()
+  const watchedThisYear = items.filter((i) => i.entry.watchedAt?.startsWith(year)).length
+  const highOnly = filters.ratingFrom === 9 && filters.ratingTo === undefined
+
   return (
-    <Screen title={t('titles.collection')}>
-      <div class="search-field">
-        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-          <path
-            fill="currentColor"
-            d="M10.5 3a7.5 7.5 0 0 1 5.9 12.1l4.2 4.2-1.4 1.4-4.2-4.2A7.5 7.5 0 1 1 10.5 3Zm0 2a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"
-          />
-        </svg>
-        <input
-          type="search"
-          autocomplete="off"
-          placeholder={t('collection.search')}
-          value={filters.text}
-          onInput={(e) => setFilters({ ...filters, text: e.currentTarget.value })}
-          onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-        />
-        {filters.text && (
-          <button class="clear" aria-label="clear" onClick={() => setFilters({ ...filters, text: '' })}>
-            ×
+    <Screen
+      title={t('titles.collection')}
+      action={
+        view === 'watched' && (
+          <button
+            class={showFilters || filterCount ? 'round-btn active' : 'round-btn'}
+            aria-label={t('collection.filters')}
+            aria-expanded={showFilters}
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              width="20"
+              height="20"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="M4 6h16M7 12h10M10 18h4" />
+            </svg>
+            {filterCount > 0 && <span class="dot-count">{filterCount}</span>}
           </button>
-        )}
-      </div>
-
-      <div class="toolbar">
-        <label class="sort-select">
-          <span class="sr-only">{t('collection.sort')}</span>
-          <select value={prefs.sort} onChange={(e) => setPrefs({ ...prefs, sort: e.currentTarget.value as SortKey })}>
-            {SORT_KEYS.map((key) => (
-              <option key={key} value={key}>
-                {t(`collection.sortBy.${key}`)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button
-          class="icon-btn"
-          aria-label={prefs.asc ? t('collection.asc') : t('collection.desc')}
-          onClick={() => setPrefs({ ...prefs, asc: !prefs.asc })}
-        >
-          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" class={prefs.asc ? 'flip' : ''}>
-            <path fill="currentColor" d="M11 4h2v12.2l4.6-4.6 1.4 1.4-7 7-7-7 1.4-1.4 4.6 4.6V4Z" />
-          </svg>
-        </button>
-        <span class="toolbar-spacer" />
-        <button
-          class={showFilters || filterCount ? 'chip-btn active' : 'chip-btn'}
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          {t('collection.filters')}
-          {filterCount > 0 && <span class="count">{filterCount}</span>}
-        </button>
-      </div>
-
-      {showFilters && items && <FilterPanel items={items} filters={filters} onChange={setFilters} />}
-
-      {items && <div class="collection-count">{tn('collection.count', visible.length)}</div>}
-
-      {items && visible.length === 0 ? (
-        <p class="notice muted">{t('collection.noMatch')}</p>
-      ) : (
-        <div class="poster-grid">
-          {visible.map((item) => (
-            <PosterTile key={item.movie.tmdbId} item={item} />
-          ))}
+        )
+      }
+    >
+      <div class="stat-strip">
+        <div class="stat-tile">
+          <b>{items.length}</b>
+          <span>{t('stats.watchedShort')}</span>
         </div>
+        <div class="stat-tile">
+          <b class="accent">{avg !== undefined ? formatAvg(avg) : '–'}</b>
+          <span>{t('stats.avgShort')}</span>
+        </div>
+        <div class="stat-tile">
+          <b>{watchedThisYear}</b>
+          <span>{t('stats.thisYear')}</span>
+        </div>
+      </div>
+
+      <div class="segmented big" role="tablist" aria-label={t('collection.view')}>
+        {(['watched', 'watchlist'] as const).map((v) => (
+          <button
+            key={v}
+            role="tab"
+            aria-selected={view === v}
+            class={view === v ? 'active' : ''}
+            onClick={() => {
+              collectionView.value = v
+              window.scrollTo(0, 0)
+            }}
+          >
+            {t(`collection.views.${v}`)} · {v === 'watched' ? items.length : watchlistCount}
+          </button>
+        ))}
+      </div>
+
+      {view === 'watchlist' ? (
+        <WatchlistBody />
+      ) : (
+        <>
+          <div class="chip-row">
+            <label class="chip sort-chip">
+              <span class="sr-only">{t('collection.sort')}</span>
+              <select
+                value={prefs.sort}
+                onChange={(e) => setPrefs({ ...prefs, sort: e.currentTarget.value as SortKey })}
+              >
+                {SORT_KEYS.map((key) => (
+                  <option key={key} value={key}>
+                    {t(`collection.sortBy.${key}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              class="chip icon-chip"
+              aria-label={prefs.asc ? t('collection.asc') : t('collection.desc')}
+              onClick={() => setPrefs({ ...prefs, asc: !prefs.asc })}
+            >
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" class={prefs.asc ? 'flip' : ''}>
+                <path fill="currentColor" d="M11 4h2v12.2l4.6-4.6 1.4 1.4-7 7-7-7 1.4-1.4 4.6 4.6V4Z" />
+              </svg>
+            </button>
+            <button
+              class={highOnly ? 'chip on' : 'chip'}
+              aria-pressed={highOnly}
+              onClick={() => setFilters({ ...filters, ratingFrom: highOnly ? undefined : 9, ratingTo: undefined })}
+            >
+              9–10
+            </button>
+            {topGenres.map((g) => (
+              <button
+                key={g}
+                class={filters.genre === g ? 'chip on' : 'chip'}
+                aria-pressed={filters.genre === g}
+                onClick={() => setFilters({ ...filters, genre: filters.genre === g ? '' : g })}
+              >
+                {g}
+              </button>
+            ))}
+          </div>
+
+          {showFilters && <FilterPanel items={items} filters={filters} onChange={setFilters} />}
+
+          {filterCount > 0 && <div class="collection-count">{tn('collection.count', visible.length)}</div>}
+
+          {items.length === 0 ? (
+            <p class="notice muted">{t('collection.emptyWatched')}</p>
+          ) : visible.length === 0 ? (
+            <p class="notice muted">{t('collection.noMatch')}</p>
+          ) : (
+            <div class="poster-grid">
+              {visible.map((item) => (
+                <PosterTile key={item.movie.tmdbId} item={item} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </Screen>
   )
+}
+
+export function formatAvg(n: number): string {
+  return n.toLocaleString(lang.value === 'uk' ? 'uk-UA' : 'en-US', {
+    maximumFractionDigits: 1,
+    minimumFractionDigits: 1
+  })
 }
 
 function PosterTile({ item }: { item: Item }) {
@@ -183,6 +272,17 @@ function FilterPanel({
 
   return (
     <div class="group filter-panel">
+      <label class="filter-row">
+        <span>{t('collection.titleFilter')}</span>
+        <input
+          type="search"
+          autocomplete="off"
+          placeholder={t('collection.search')}
+          value={filters.text}
+          onInput={(e) => onChange({ ...filters, text: e.currentTarget.value })}
+          onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        />
+      </label>
       <label class="filter-row">
         <span>{t('collection.genre')}</span>
         <select value={filters.genre} onChange={(e) => onChange({ ...filters, genre: e.currentTarget.value })}>
@@ -258,8 +358,8 @@ function FilterPanel({
           ))}
         </datalist>
       </label>
-      {activeFilterCount(filters) > 0 && (
-        <button class="link" onClick={() => onChange({ ...emptyFilters, text: filters.text })}>
+      {(activeFilterCount(filters) > 0 || filters.text) && (
+        <button class="link" onClick={() => onChange(emptyFilters)}>
           {t('collection.reset')}
         </button>
       )}

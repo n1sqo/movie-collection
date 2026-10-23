@@ -2,10 +2,9 @@ import { useState } from 'preact/hooks'
 import { lang, t, type Lang } from '../i18n'
 import { saveLang, saveTmdbToken, tmdbToken } from '../settings'
 import { checkToken, TmdbError } from '../api/tmdb'
-import { Screen } from '../components/Screen'
 import tmdbLogo from '../assets/tmdb-logo.svg'
 import { BackupSettings } from '../components/BackupSettings'
-import { DataSettings, Stats } from '../components/DataSettings'
+import { DataSettings } from '../components/DataSettings'
 
 /** The short 32-character "API Key" from TMDB is a different credential than the Read Access Token. */
 const looksLikeApiKey = (value: string) => /^[a-f0-9]{32}$/i.test(value.trim())
@@ -13,7 +12,8 @@ const looksLikeApiKey = (value: string) => /^[a-f0-9]{32}$/i.test(value.trim())
 type CheckState =
   { kind: 'idle' } | { kind: 'busy' } | { kind: 'ok' } | { kind: 'saved' } | { kind: 'error'; message: string }
 
-export function Settings() {
+/** Language, TMDB key, backup and data: the lower half of the «Я» screen. */
+export function SettingsSections() {
   const [token, setToken] = useState(tmdbToken.value)
   const [check, setCheck] = useState<CheckState>({ kind: 'idle' })
 
@@ -43,7 +43,8 @@ export function Settings() {
   }
 
   return (
-    <Screen title={t('titles.settings')}>
+    <>
+      <h2 class="section-title">{t('titles.settings')}</h2>
       <h2 class="group-title">{t('settings.language')}</h2>
       <div class="group">
         <div class="segmented">
@@ -99,8 +100,6 @@ export function Settings() {
 
       <DataSettings />
 
-      <Stats />
-
       <div class="attribution">
         <img src={tmdbLogo} alt="TMDB" width={96} height={96} />
         <p>{t('settings.attribution')}</p>
@@ -108,6 +107,6 @@ export function Settings() {
           {t('settings.version')} {__APP_VERSION__}
         </p>
       </div>
-    </Screen>
+    </>
   )
 }

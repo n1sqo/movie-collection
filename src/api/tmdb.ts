@@ -57,6 +57,7 @@ export interface SearchPage {
   results: SearchResult[]
   page: number
   totalPages: number
+  totalResults: number
 }
 
 /** TMDB caps search at 500 pages of 20 results. */
@@ -76,7 +77,7 @@ export async function searchMovies(
   const q = encodeURIComponent(query)
   const [uk, en] = await Promise.all(
     (['uk-UA', 'en-US'] as const).map((language) =>
-      request<{ results: RawMovie[]; total_pages?: number }>(
+      request<{ results: RawMovie[]; total_pages?: number; total_results?: number }>(
         token,
         `/search/movie?query=${q}&language=${language}&include_adult=false&page=${page}`,
         signal
@@ -103,7 +104,8 @@ export async function searchMovies(
     })
   }
   const totalPages = Math.min(MAX_PAGES, Math.max(uk.total_pages ?? 1, en.total_pages ?? 1))
-  return { results, page, totalPages }
+  const totalResults = Math.max(uk.total_results ?? 0, en.total_results ?? 0)
+  return { results, page, totalPages, totalResults }
 }
 
 interface RawDetails {
