@@ -96,5 +96,12 @@
       "title": "Title",
       "addedAt": "Date added"
     }
+  },
+  "watchlist": {
+    "empty": "Add movies here from Search with “Want to watch”.",
+    "goSearch": "Find a movie",
+    "watched": "Watched",
+    "rate": "Your rating?",
+    "cancel": "Cancel"
   }
 }
