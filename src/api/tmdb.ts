@@ -2,11 +2,8 @@ import type { Movie } from '../db'
 const API = 'https://api.themoviedb.org/3'
 export const IMG = 'https://image.tmdb.org/t/p'
 
-/** Demo build only: poster paths that resolve to bundled data URLs instead of image.tmdb.org. */
-export const posterOverrides = new Map<string, string>()
-
 export function posterUrl(posterPath: string, size: string): string {
-  return posterOverrides.get(posterPath) ?? `${IMG}/${size}${posterPath}`
+  return `${IMG}/${size}${posterPath}`
 }
 
 export type TmdbErrorKind = 'noKey' | 'unauthorized' | 'network' | 'rateLimit' | 'server'
@@ -123,12 +120,6 @@ export async function getMovieDetails(token: string, id: number): Promise<Movie>
 
 export async function downloadPoster(posterPath: string): Promise<Blob | undefined> {
   if (!posterPath) return undefined
-  const override = posterOverrides.get(posterPath)
-  if (override) {
-    const [meta, data] = override.split(',')
-    const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0))
-    return new Blob([bytes], { type: meta.slice(5, meta.indexOf(';')) })
-  }
   try {
     const res = await fetch(`${IMG}/w500${posterPath}`)
     return res.ok ? await res.blob() : undefined

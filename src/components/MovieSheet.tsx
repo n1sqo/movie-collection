@@ -20,9 +20,19 @@ export const openMovie = signal<{ id: number; preview?: SheetPreview } | null>(n
 
 export function MovieSheetHost() {
   const current = openMovie.value
+  const isOpen = !!current
   useEffect(() => {
-    document.body.classList.toggle('sheet-open', !!current)
-  }, [current])
+    if (!isOpen) return
+    // Pin the page under the sheet so iOS doesn't scroll the list behind it.
+    const scrollY = window.scrollY
+    document.body.style.top = `-${scrollY}px`
+    document.body.classList.add('sheet-open')
+    return () => {
+      document.body.classList.remove('sheet-open')
+      document.body.style.top = ''
+      window.scrollTo(0, scrollY)
+    }
+  }, [isOpen])
   if (!current) return null
   return <MovieSheet key={current.id} id={current.id} preview={current.preview} onClose={() => (openMovie.value = null)} />
 }

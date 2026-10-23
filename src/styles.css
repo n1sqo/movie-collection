@@ -26,6 +26,7 @@
     --surface-raised: #636366;
     --green: #30d158;
     --red: #ff453a;
+    color-scheme: dark;
   }
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -143,9 +144,11 @@ input, textarea, select, button { font: inherit; font-size: max(16px, 1em); colo
 .result-badge.watchlist { background: var(--fill); color: var(--accent); }
 
 /* Movie sheet */
-body.sheet-open { overflow: hidden; }
+/* iOS ignores overflow:hidden on body; the sheet host pins the body with position:fixed instead. */
+body.sheet-open { position: fixed; left: 0; right: 0; overflow: hidden; }
 .sheet-backdrop {
-  position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.4);
+  position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.55);
+  touch-action: none; overscroll-behavior: contain;
   display: flex; align-items: flex-end; animation: fade 0.2s ease;
 }
 .sheet {
@@ -158,6 +161,7 @@ body.sheet-open { overflow: hidden; }
 .sheet-header { display: flex; justify-content: flex-end; padding: 12px 16px 4px; }
 .sheet-body {
   flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+  touch-action: pan-y; overscroll-behavior: contain;
   padding: 0 calc(env(safe-area-inset-right) + 16px) calc(env(safe-area-inset-bottom) + 24px) calc(env(safe-area-inset-left) + 16px);
 }
 .link { border: 0; background: none; padding: 6px 0; color: var(--accent); font-size: 17px; }
