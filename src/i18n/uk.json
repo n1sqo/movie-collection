@@ -2,5 +2,32 @@
   "tabs": { "search": "Пошук", "collection": "Колекція", "watchlist": "Хочу", "settings": "Налаштування" },
   "titles": { "search": "Пошук", "collection": "Моя колекція", "watchlist": "Хочу подивитись", "settings": "Налаштування" },
   "placeholder": { "soon": "Скоро тут щось буде" },
-  "offline": "Немає мережі"
+  "offline": "Немає мережі",
+  "search": {
+    "placeholder": "Назва фільму",
+    "hint": "Шукай українською або англійською",
+    "empty": "Нічого не знайдено",
+    "offline": "Пошук працює лише з інтернетом. Колекція доступна офлайн.",
+    "noKey": "Додай ключ TMDB у налаштуваннях, щоб шукати фільми.",
+    "goSettings": "Відкрити налаштування"
+  },
+  "errors": {
+    "unauthorized": "TMDB не прийняв ключ. Перевір його в налаштуваннях.",
+    "network": "Не вдалося з'єднатися з TMDB.",
+    "rateLimit": "Забагато запитів до TMDB, спробуй за кілька секунд.",
+    "server": "TMDB зараз не відповідає, спробуй пізніше.",
+    "noKey": "Ключ TMDB не задано."
+  },
+  "settings": {
+    "language": "Мова",
+    "tmdb": "TMDB",
+    "tmdbToken": "Read Access Token",
+    "tmdbTokenHint": "Візьми на themoviedb.org → Налаштування → API. Ключ зберігається лише на цьому пристрої.",
+    "save": "Зберегти",
+    "check": "Перевірити",
+    "checking": "Перевіряю…",
+    "ok": "Ключ працює",
+    "saved": "Збережено",
+    "attribution": "This product uses the TMDB API but is not endorsed or certified by TMDB."
+  }
 }

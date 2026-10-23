@@ -2,5 +2,32 @@
   "tabs": { "search": "Search", "collection": "Collection", "watchlist": "Watchlist", "settings": "Settings" },
   "titles": { "search": "Search", "collection": "My Collection", "watchlist": "Watchlist", "settings": "Settings" },
   "placeholder": { "soon": "Coming soon" },
-  "offline": "No connection"
+  "offline": "No connection",
+  "search": {
+    "placeholder": "Movie title",
+    "hint": "Search in Ukrainian or English",
+    "empty": "Nothing found",
+    "offline": "Search needs an internet connection. Your collection works offline.",
+    "noKey": "Add your TMDB key in Settings to search movies.",
+    "goSettings": "Open Settings"
+  },
+  "errors": {
+    "unauthorized": "TMDB rejected the key. Check it in Settings.",
+    "network": "Couldn't connect to TMDB.",
+    "rateLimit": "Too many requests to TMDB, try again in a few seconds.",
+    "server": "TMDB is not responding, try again later.",
+    "noKey": "TMDB key is not set."
+  },
+  "settings": {
+    "language": "Language",
+    "tmdb": "TMDB",
+    "tmdbToken": "Read Access Token",
+    "tmdbTokenHint": "Get it at themoviedb.org → Settings → API. The key stays on this device only.",
+    "save": "Save",
+    "check": "Check",
+    "checking": "Checking…",
+    "ok": "Key works",
+    "saved": "Saved",
+    "attribution": "This product uses the TMDB API but is not endorsed or certified by TMDB."
+  }
 }

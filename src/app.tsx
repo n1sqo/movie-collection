@@ -1,26 +1,15 @@
 import { signal } from '@preact/signals'
-import { useEffect } from 'preact/hooks'
 import { t } from './i18n'
+import { online } from './useOnline'
 import { TabBar, type Tab } from './components/TabBar'
 import { Search } from './screens/Search'
 import { Collection } from './screens/Collection'
 import { Watchlist } from './screens/Watchlist'
 import { Settings } from './screens/Settings'
 
-const tab = signal<Tab>('collection')
-const online = signal(navigator.onLine)
+export const tab = signal<Tab>('collection')
 
 export function App() {
-  useEffect(() => {
-    const update = () => (online.value = navigator.onLine)
-    window.addEventListener('online', update)
-    window.addEventListener('offline', update)
-    return () => {
-      window.removeEventListener('online', update)
-      window.removeEventListener('offline', update)
-    }
-  }, [])
-
   return (
     <div class="app">
       {!online.value && <div class="banner">{t('offline')}</div>}
