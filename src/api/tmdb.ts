@@ -1,3 +1,4 @@
+import type { Movie } from '../db'
 const API = 'https://api.themoviedb.org/3'
 export const IMG = 'https://image.tmdb.org/t/p'
 
@@ -67,4 +68,58 @@ export async function searchMovies(token: string, query: string, signal?: AbortS
     year: m.release_date ? Number(m.release_date.slice(0, 4)) : undefined,
     posterPath: m.poster_path ?? undefined
   }))
+}
+
+interface RawDetails {
+  id: number
+  title: string
+  original_title: string
+  release_date?: string
+  genres: { id: number; name: string }[]
+  overview: string
+  runtime: number | null
+  vote_average: number
+  poster_path: string | null
+  credits?: {
+    cast: { name: string; character: string; order: number }[]
+    crew: { name: string; job: string }[]
+  }
+}
+
+export async function getMovieDetails(token: string, id: number): Promise<Movie> {
+  const [uk, en] = await Promise.all([
+    request<RawDetails>(token, `/movie/${id}?language=uk-UA&append_to_response=credits`),
+    request<RawDetails>(token, `/movie/${id}?language=en-US`)
+  ])
+  const credits = uk.credits ?? { cast: [], crew: [] }
+  return {
+    tmdbId: uk.id,
+    titleUk: uk.title,
+    titleEn: en.title,
+    originalTitle: uk.original_title,
+    year: uk.release_date ? Number(uk.release_date.slice(0, 4)) : 0,
+    releaseDate: uk.release_date ?? '',
+    genres: uk.genres.map((g) => g.name),
+    genresEn: en.genres.map((g) => g.name),
+    directors: credits.crew.filter((c) => c.job === 'Director').map((c) => c.name),
+    cast: [...credits.cast]
+      .sort((a, b) => a.order - b.order)
+      .slice(0, 10)
+      .map((c) => ({ name: c.name, character: c.character })),
+    overviewUk: uk.overview,
+    overviewEn: en.overview,
+    runtime: uk.runtime ?? 0,
+    tmdbRating: Math.round(uk.vote_average * 10) / 10,
+    posterPath: uk.poster_path ?? en.poster_path ?? ''
+  }
+}
+
+export async function downloadPoster(posterPath: string): Promise<Blob | undefined> {
+  if (!posterPath) return undefined
+  try {
+    const res = await fetch(`${IMG}/w500${posterPath}`)
+    return res.ok ? await res.blob() : undefined
+  } catch {
+    return undefined
+  }
 }

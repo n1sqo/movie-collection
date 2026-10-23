@@ -1,7 +1,19 @@
 {
-  "tabs": { "search": "Пошук", "collection": "Колекція", "watchlist": "Хочу", "settings": "Налаштування" },
-  "titles": { "search": "Пошук", "collection": "Моя колекція", "watchlist": "Хочу подивитись", "settings": "Налаштування" },
-  "placeholder": { "soon": "Скоро тут щось буде" },
+  "tabs": {
+    "search": "Пошук",
+    "collection": "Колекція",
+    "watchlist": "Хочу",
+    "settings": "Налаштування"
+  },
+  "titles": {
+    "search": "Пошук",
+    "collection": "Моя колекція",
+    "watchlist": "Хочу подивитись",
+    "settings": "Налаштування"
+  },
+  "placeholder": {
+    "soon": "Скоро тут щось буде"
+  },
   "offline": "Немає мережі",
   "search": {
     "placeholder": "Назва фільму",
@@ -29,5 +41,29 @@
     "ok": "Ключ працює",
     "saved": "Збережено",
     "attribution": "This product uses the TMDB API but is not endorsed or certified by TMDB."
+  },
+  "movie": {
+    "watched": "Бачив",
+    "wantToWatch": "Хочу подивитись",
+    "inWatchlist": "У списку «Хочу подивитись»",
+    "myRating": "Моя оцінка",
+    "watchedAt": "Дата перегляду",
+    "note": "Нотатка",
+    "notePlaceholder": "Що запам'яталось",
+    "director": "Режисер",
+    "cast": "У ролях",
+    "overview": "Опис",
+    "tmdbRating": "TMDB",
+    "min": "хв",
+    "save": "Зберегти",
+    "cancel": "Скасувати",
+    "close": "Закрити",
+    "remove": "Видалити з колекції",
+    "removeConfirm": "Точно видалити? Оцінка й нотатка зникнуть.",
+    "removeYes": "Так, видалити",
+    "markWatched": "Позначити як переглянутий",
+    "loading": "Завантажую…",
+    "chooseRating": "Обери оцінку",
+    "inCollection": "У колекції"
   }
 }

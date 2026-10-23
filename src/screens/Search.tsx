@@ -5,6 +5,9 @@ import { online } from '../useOnline'
 import { IMG, searchMovies, TmdbError, type SearchResult } from '../api/tmdb'
 import { Screen } from '../components/Screen'
 import { tab } from '../app'
+import { openMovie } from '../components/MovieSheet'
+import { db } from '../db'
+import { useLiveQuery } from '../useLiveQuery'
 
 const DEBOUNCE_MS = 400
 
@@ -102,15 +105,31 @@ function SearchBody({ state, query }: { state: State; query: string }) {
   if (state.kind === 'error') return <p class="notice error">{state.message}</p>
   if (state.kind === 'done' && state.results.length === 0) return <p class="notice muted">{t('search.empty')}</p>
   if (state.kind !== 'done') return null
+  return <Results results={state.results} />
+}
+
+function Results({ results }: { results: SearchResult[] }) {
+  const ids = results.map((m) => m.id)
+  const entries = useLiveQuery(() => db.entries.bulkGet(ids), [ids.join(',')])
+  const statusById = new Map(entries?.filter((e) => e).map((e) => [e!.tmdbId, e!]) ?? [])
 
   return (
     <ul class="results">
-      {state.results.map((m) => {
+      {results.map((m) => {
         const primary = lang.value === 'uk' ? m.titleUk : m.titleEn
         const secondary = lang.value === 'uk' ? m.titleEn : m.titleUk
         const extra = secondary !== primary ? secondary : m.originalTitle !== primary ? m.originalTitle : ''
         return (
-          <li key={m.id} class="result">
+          <li
+            key={m.id}
+            class="result"
+            onClick={() =>
+              (openMovie.value = {
+                id: m.id,
+                preview: { titleUk: m.titleUk, titleEn: m.titleEn, year: m.year, posterPath: m.posterPath }
+              })
+            }
+          >
             {m.posterPath ? (
               <img class="thumb" src={`${IMG}/w185${m.posterPath}`} alt="" loading="lazy" />
             ) : (
@@ -121,9 +140,28 @@ function SearchBody({ state, query }: { state: State; query: string }) {
               {extra && <div class="result-sub">{extra}</div>}
               {m.year && <div class="result-year">{m.year}</div>}
             </div>
+            <ResultBadge entry={statusById.get(m.id)} />
           </li>
         )
       })}
     </ul>
+  )
+}
+
+function ResultBadge({ entry }: { entry?: { status: string; myRating?: number } }) {
+  if (!entry) return null
+  if (entry.status === 'watchlist') {
+    return (
+      <span class="result-badge watchlist" aria-label={t('movie.inWatchlist')}>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <path fill="currentColor" d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z" />
+        </svg>
+      </span>
+    )
+  }
+  return (
+    <span class="result-badge" aria-label={t('movie.inCollection')}>
+      {entry.myRating ?? '✓'}
+    </span>
   )
 }

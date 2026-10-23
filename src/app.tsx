@@ -6,6 +6,7 @@ import { Search } from './screens/Search'
 import { Collection } from './screens/Collection'
 import { Watchlist } from './screens/Watchlist'
 import { Settings } from './screens/Settings'
+import { MovieSheetHost } from './components/MovieSheet'
 
 export const tab = signal<Tab>('collection')
 
@@ -20,6 +21,7 @@ export function App() {
         {tab.value === 'settings' && <Settings />}
       </main>
       <TabBar active={tab.value} onChange={(next) => (tab.value = next)} />
+      <MovieSheetHost />
     </div>
   )
 }

@@ -1,7 +1,19 @@
 {
-  "tabs": { "search": "Search", "collection": "Collection", "watchlist": "Watchlist", "settings": "Settings" },
-  "titles": { "search": "Search", "collection": "My Collection", "watchlist": "Watchlist", "settings": "Settings" },
-  "placeholder": { "soon": "Coming soon" },
+  "tabs": {
+    "search": "Search",
+    "collection": "Collection",
+    "watchlist": "Watchlist",
+    "settings": "Settings"
+  },
+  "titles": {
+    "search": "Search",
+    "collection": "My Collection",
+    "watchlist": "Watchlist",
+    "settings": "Settings"
+  },
+  "placeholder": {
+    "soon": "Coming soon"
+  },
   "offline": "No connection",
   "search": {
     "placeholder": "Movie title",
@@ -29,5 +41,29 @@
     "ok": "Key works",
     "saved": "Saved",
     "attribution": "This product uses the TMDB API but is not endorsed or certified by TMDB."
+  },
+  "movie": {
+    "watched": "Watched",
+    "wantToWatch": "Want to watch",
+    "inWatchlist": "In your Watchlist",
+    "myRating": "My rating",
+    "watchedAt": "Watched on",
+    "note": "Note",
+    "notePlaceholder": "What stuck with you",
+    "director": "Director",
+    "cast": "Cast",
+    "overview": "Overview",
+    "tmdbRating": "TMDB",
+    "min": "min",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "remove": "Remove from collection",
+    "removeConfirm": "Remove it? Your rating and note will be lost.",
+    "removeYes": "Yes, remove",
+    "markWatched": "Mark as watched",
+    "loading": "Loading…",
+    "chooseRating": "Pick a rating",
+    "inCollection": "In collection"
   }
 }
