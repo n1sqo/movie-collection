@@ -65,5 +65,36 @@
     "loading": "Loading…",
     "chooseRating": "Pick a rating",
     "inCollection": "In collection"
+  },
+  "collection": {
+    "search": "Search collection",
+    "sort": "Sort",
+    "filters": "Filters",
+    "reset": "Reset",
+    "count": {
+      "one": "{n} movie",
+      "other": "{n} movies"
+    },
+    "empty": "Movies you mark as Watched will show up here.",
+    "goSearch": "Find a movie",
+    "noMatch": "Nothing matches the filters",
+    "genre": "Genre",
+    "anyGenre": "Any",
+    "years": "Years",
+    "rating": "My rating",
+    "person": "Actor or director",
+    "personPlaceholder": "Name",
+    "from": "from",
+    "to": "to",
+    "asc": "Ascending",
+    "desc": "Descending",
+    "sortBy": {
+      "myRating": "My rating",
+      "tmdbRating": "TMDB rating",
+      "year": "Year",
+      "watchedAt": "Date watched",
+      "title": "Title",
+      "addedAt": "Date added"
+    }
   }
 }
