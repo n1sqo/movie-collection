@@ -22,7 +22,14 @@ export function App() {
         {tab.value === 'watchlist' && <Watchlist />}
         {tab.value === 'settings' && <Settings />}
       </main>
-      <TabBar active={tab.value} onChange={(next) => (tab.value = next)} />
+      <TabBar
+        active={tab.value}
+        onChange={(next) => {
+          if (next === tab.value) window.scrollTo({ top: 0, behavior: 'smooth' })
+          else window.scrollTo(0, 0)
+          tab.value = next
+        }}
+      />
       <MovieSheetHost />
     </div>
   )

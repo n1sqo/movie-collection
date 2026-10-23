@@ -27,7 +27,19 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,json}'],
-        navigateFallback: '/movie-collection/index.html'
+        navigateFallback: '/movie-collection/index.html',
+        runtimeCaching: [
+          {
+            // Search thumbnails; collection posters live in IndexedDB.
+            urlPattern: /^https:\/\/image\.tmdb\.org\//,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'tmdb-images',
+              expiration: { maxEntries: 300, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [0, 200] }
+            }
+          }
+        ]
       }
     })
   ]
