@@ -1,0 +1,6 @@
+{
+  "tabs": { "search": "Search", "collection": "Collection", "watchlist": "Watchlist", "settings": "Settings" },
+  "titles": { "search": "Search", "collection": "My Collection", "watchlist": "Watchlist", "settings": "Settings" },
+  "placeholder": { "soon": "Coming soon" },
+  "offline": "No connection"
+}

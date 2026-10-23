@@ -1,0 +1,6 @@
+{
+  "tabs": { "search": "Пошук", "collection": "Колекція", "watchlist": "Хочу", "settings": "Налаштування" },
+  "titles": { "search": "Пошук", "collection": "Моя колекція", "watchlist": "Хочу подивитись", "settings": "Налаштування" },
+  "placeholder": { "soon": "Скоро тут щось буде" },
+  "offline": "Немає мережі"
+}
