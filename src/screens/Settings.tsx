@@ -4,6 +4,7 @@ import { saveLang, saveTmdbToken, tmdbToken } from '../settings'
 import { checkToken, TmdbError } from '../api/tmdb'
 import { Screen } from '../components/Screen'
 import { BackupSettings } from '../components/BackupSettings'
+import { DataSettings, Stats } from '../components/DataSettings'
 
 type CheckState = { kind: 'idle' } | { kind: 'busy' } | { kind: 'ok' } | { kind: 'saved' } | { kind: 'error'; message: string }
 
@@ -72,6 +73,10 @@ export function Settings() {
       <p class="group-footer">{t('settings.tmdbTokenHint')}</p>
 
       <BackupSettings />
+
+      <DataSettings />
+
+      <Stats />
 
       <div class="attribution">
         <img src={`${import.meta.env.BASE_URL}tmdb-logo.svg`} alt="TMDB" width={96} height={96} />

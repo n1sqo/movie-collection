@@ -137,5 +137,21 @@
       "server": "GitHub is not responding",
       "invalid": "the backup file is corrupted"
     }
+  },
+  "data": {
+    "title": "Data",
+    "export": "Export to JSON",
+    "import": "Import from file",
+    "exported": "File is ready",
+    "importFound": "The file has {n}. How to import?",
+    "importDone": "Imported",
+    "invalid": "This isn't a collection file"
+  },
+  "stats": {
+    "title": "Statistics",
+    "watched": "Watched",
+    "watchlist": "Watchlist",
+    "avg": "Average rating",
+    "topGenres": "Top genres"
   }
 }
