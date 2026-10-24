@@ -47,8 +47,6 @@ async function loadWatched(): Promise<Item[]> {
 export type CollectionView = 'watched' | 'watchlist'
 export const collectionView = signal<CollectionView>('watched')
 
-const thisYear = () => String(new Date().getFullYear())
-
 export function Collection() {
   const items = useLiveQuery(loadWatched)
   const watchlistCount = useLiveQuery(() => db.entries.where('status').equals('watchlist').count())
@@ -98,10 +96,6 @@ export function Collection() {
     )
   }
 
-  const rated = items.filter((i) => i.entry.myRating !== undefined)
-  const avg = rated.length ? rated.reduce((s, i) => s + i.entry.myRating!, 0) / rated.length : undefined
-  const year = thisYear()
-  const watchedThisYear = items.filter((i) => i.entry.watchedAt?.startsWith(year)).length
   const highOnly = filters.ratingFrom === 9 && filters.ratingTo === undefined
 
   return (
@@ -132,21 +126,6 @@ export function Collection() {
         )
       }
     >
-      <div class="stat-strip">
-        <div class="stat-tile">
-          <b>{items.length}</b>
-          <span>{t('stats.watchedShort')}</span>
-        </div>
-        <div class="stat-tile">
-          <b class="accent">{avg !== undefined ? formatAvg(avg) : '–'}</b>
-          <span>{t('stats.avgShort')}</span>
-        </div>
-        <div class="stat-tile">
-          <b>{watchedThisYear}</b>
-          <span>{t('stats.thisYear')}</span>
-        </div>
-      </div>
-
       <div class="segmented big" role="tablist" aria-label={t('collection.view')}>
         {(['watched', 'watchlist'] as const).map((v) => (
           <button

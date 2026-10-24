@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks'
+import { useEffect, useState } from 'preact/hooks'
 import { lang, t } from '../i18n'
 import { tmdbToken } from '../settings'
 import { online } from '../useOnline'
@@ -78,37 +78,21 @@ export function Search() {
 
   return (
     <Screen title={t('titles.search')}>
+      <SearchBar query={query} onQuery={setQuery} />
       {state.kind === 'done' && state.query === query.trim() && state.data.totalResults > 0 && (
         <p class="result-count">
           {t('search.count').replace('{n}', String(state.data.totalResults)).replace('{q}', state.query)}
         </p>
       )}
       <SearchBody state={state} query={query} page={page} onPage={setPage} />
-      <SearchBar query={query} onQuery={setQuery} />
     </Screen>
   )
 }
 
-/** Search field at the bottom, above the keyboard when it is open. */
+/** Pinned under the status bar while the results scroll, like the iOS search field. */
 function SearchBar({ query, onQuery }: { query: string; onQuery: (q: string) => void }) {
-  const bar = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const vv = window.visualViewport
-    if (!vv) return
-    const place = () => {
-      const keyboard = Math.max(0, window.innerHeight - vv.height - vv.offsetTop)
-      bar.current?.style.setProperty('--keyboard', `${keyboard}px`)
-    }
-    place()
-    vv.addEventListener('resize', place)
-    vv.addEventListener('scroll', place)
-    return () => {
-      vv.removeEventListener('resize', place)
-      vv.removeEventListener('scroll', place)
-    }
-  }, [])
   return (
-    <div class="search-bar" ref={bar}>
+    <div class="search-bar">
       <div class="search-field floating">
         {searchIcon(20)}
         <input
@@ -161,7 +145,7 @@ function SearchBody({
     return (
       <div class="notice">
         <p>{t('search.noKey')}</p>
-        <button class="btn primary" onClick={() => goTo('me')}>
+        <button class="btn primary" onClick={() => goTo('options')}>
           {t('search.goSettings')}
         </button>
       </div>

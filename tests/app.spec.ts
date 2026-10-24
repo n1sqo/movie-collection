@@ -37,6 +37,23 @@ test('search closes back to the section it was opened from', async ({ page }) =>
   await expect(page.locator('.large-title')).toHaveText('Я')
 })
 
+test('rating panel has no gap above the number', async ({ page }) => {
+  await search(page, 'film')
+  await page.locator('.result').first().click()
+  await page.getByRole('button', { name: 'Бачив', exact: true }).click()
+  const box = await page.locator('.rate-panel').boundingBox()
+  const num = await page.locator('.rate-big').boundingBox()
+  expect(num!.y - box!.y).toBeLessThan(40)
+})
+
+test('search field stays pinned at the top while results scroll', async ({ page }) => {
+  await search(page, 'film')
+  await page.mouse.wheel(0, 1500)
+  await page.waitForTimeout(200)
+  const bar = await page.locator('.search-bar').boundingBox()
+  expect(bar!.y).toBeLessThan(10)
+})
+
 test('rating: big number with label, date chips, Done collapses to a summary', async ({ page }) => {
   await search(page, 'film')
   await page.locator('.result').first().click()
@@ -112,8 +129,7 @@ test('collection: stats, segments, quick filters and title search', async ({ pag
     await closeSheet(page)
   }
   await goTo(page, 'Колекція')
-  await expect(page.locator('.stat-tile').first()).toContainText('3')
-  await expect(page.locator('.stat-tile').nth(1)).toContainText('8,3')
+  await expect(page.locator('.stat-tile')).toHaveCount(0)
   await expect(page.locator('.poster-tile')).toHaveCount(3)
   await page.getByRole('button', { name: '9–10' }).click()
   await expect(page.locator('.poster-tile')).toHaveCount(2)
@@ -155,16 +171,19 @@ test('Me: rating histogram and favourite genres', async ({ page }) => {
     await closeSheet(page)
   }
   await goTo(page, 'Я')
+  await expect(page.locator('.stat-tile').first()).toContainText('2')
+  await expect(page.locator('.stat-tile').nth(1)).toContainText('8,0')
   await expect(page.locator('.bar.top')).toHaveCount(1)
   await expect(page.locator('.bar-col').nth(7)).toContainText('2')
   await expect(page.locator('.meter')).toContainText('Драма')
 })
 
 test('English interface', async ({ page }) => {
-  await goTo(page, 'Я')
+  await goTo(page, 'Опції')
   await page.getByRole('button', { name: 'English' }).click()
   await expect(page.locator('.tabbar')).toContainText('Collection')
-  await expect(page.locator('.large-title')).toHaveText('Me')
+  await expect(page.locator('.tabbar')).toContainText('Options')
+  await expect(page.locator('.large-title')).toHaveText('Settings')
 })
 
 test('backup merges remote changes and keeps deletions', async ({ context, page }) => {
@@ -176,7 +195,7 @@ test('backup merges remote changes and keeps deletions', async ({ context, page 
   await page.getByRole('button', { name: 'Бачив', exact: true }).click()
   await page.locator('.rating-picker button', { hasText: /^6$/ }).click()
   await closeSheet(page)
-  await goTo(page, 'Я')
+  await goTo(page, 'Опції')
   await page.getByRole('button', { name: 'Зробити бекап зараз' }).click()
   await expect.poll(() => repo.commits.length).toBe(1)
 
@@ -200,7 +219,7 @@ test('backup merges remote changes and keeps deletions', async ({ context, page 
   await page.getByRole('button', { name: 'Фільм 1', exact: true }).click()
   await page.getByRole('button', { name: 'Видалити з колекції' }).click()
   await page.locator('.remove-confirm .destructive').click()
-  await goTo(page, 'Я')
+  await goTo(page, 'Опції')
   await page.getByRole('button', { name: 'Зробити бекап зараз' }).click()
   await expect.poll(() => repo.commits.length).toBe(3)
   const afterDelete = JSON.parse(repo.file!)

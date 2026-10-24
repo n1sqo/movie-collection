@@ -94,7 +94,7 @@ export async function mockGithub(ctx: BrowserContext, repo: FakeRepo) {
   })
 }
 
-export async function goTo(page: Page, section: 'Колекція' | 'Я') {
+export async function goTo(page: Page, section: 'Колекція' | 'Я' | 'Опції') {
   if (await page.locator('.search-bar').isVisible()) await page.getByRole('button', { name: 'Закрити пошук' }).click()
   await page.locator('.tabbar').getByRole('button', { name: section, exact: true }).click()
 }
@@ -104,13 +104,13 @@ export async function closeSheet(page: Page) {
 }
 
 export async function setTmdbToken(page: Page) {
-  await goTo(page, 'Я')
+  await goTo(page, 'Опції')
   await page.locator('input[type=password]').first().fill(TMDB_TOKEN)
   await page.getByRole('button', { name: 'Зберегти' }).first().click()
 }
 
 export async function setupBackup(page: Page) {
-  await goTo(page, 'Я')
+  await goTo(page, 'Опції')
   const inputs = page.locator('.group.stack input')
   await inputs.nth(0).fill('me')
   await inputs.nth(2).fill(GH_TOKEN)

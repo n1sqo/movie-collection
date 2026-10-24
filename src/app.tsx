@@ -5,6 +5,7 @@ import { TabBar, type Tab } from './components/TabBar'
 import { Search } from './screens/Search'
 import { Collection } from './screens/Collection'
 import { Me } from './screens/Me'
+import { Options } from './screens/Settings'
 import { MovieSheetHost } from './components/MovieSheet'
 import { BackupBanner } from './components/BackupBanner'
 import { ToastHost } from './components/Toast'
@@ -38,6 +39,7 @@ export function App() {
         {tab.value === 'search' && <Search />}
         {tab.value === 'collection' && <Collection />}
         {tab.value === 'me' && <Me />}
+        {tab.value === 'options' && <Options />}
       </main>
       {tab.value !== 'search' && <TabBar active={tab.value} onChange={goTo} />}
       <MovieSheetHost />

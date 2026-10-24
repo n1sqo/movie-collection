@@ -2,6 +2,7 @@ import { useState } from 'preact/hooks'
 import { lang, t, type Lang } from '../i18n'
 import { saveLang, saveTmdbToken, tmdbToken } from '../settings'
 import { checkToken, TmdbError } from '../api/tmdb'
+import { Screen } from '../components/Screen'
 import tmdbLogo from '../assets/tmdb-logo.svg'
 import { BackupSettings } from '../components/BackupSettings'
 import { DataSettings } from '../components/DataSettings'
@@ -12,8 +13,8 @@ const looksLikeApiKey = (value: string) => /^[a-f0-9]{32}$/i.test(value.trim())
 type CheckState =
   { kind: 'idle' } | { kind: 'busy' } | { kind: 'ok' } | { kind: 'saved' } | { kind: 'error'; message: string }
 
-/** Language, TMDB key, backup and data: the lower half of the «Я» screen. */
-export function SettingsSections() {
+/** Language, TMDB key, backup and data. */
+export function Options() {
   const [token, setToken] = useState(tmdbToken.value)
   const [check, setCheck] = useState<CheckState>({ kind: 'idle' })
 
@@ -43,8 +44,7 @@ export function SettingsSections() {
   }
 
   return (
-    <>
-      <h2 class="section-title">{t('titles.settings')}</h2>
+    <Screen title={t('titles.settings')}>
       <h2 class="group-title">{t('settings.language')}</h2>
       <div class="group">
         <div class="segmented">
@@ -107,6 +107,6 @@ export function SettingsSections() {
           {t('settings.version')} {__APP_VERSION__}
         </p>
       </div>
-    </>
+    </Screen>
   )
 }

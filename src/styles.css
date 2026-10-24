@@ -1072,8 +1072,7 @@ body.sheet-open {
   gap: 10px;
   align-items: center;
 }
-.tabbar::before,
-.search-bar::before {
+.tabbar::before {
   /* Fades the content out under the floating controls. */
   content: '';
   position: fixed;
@@ -1156,10 +1155,10 @@ body.sheet-open {
   color: var(--on-accent);
 }
 .round-btn.big {
-  width: 56px;
-  height: 56px;
-  border-radius: 28px;
-  background: var(--bar);
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  background: var(--surface);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
@@ -1385,11 +1384,12 @@ body.sheet-open {
   opacity: 0.4;
 }
 .search-bar {
-  position: fixed;
-  z-index: 10;
-  left: calc(env(safe-area-inset-left) + 16px);
-  right: calc(env(safe-area-inset-right) + 16px);
-  bottom: calc(var(--keyboard, 0px) + max(16px, env(safe-area-inset-bottom)));
+  position: sticky;
+  z-index: 5;
+  top: env(safe-area-inset-top);
+  margin: 0 -20px 8px;
+  padding: 8px 20px;
+  background: var(--bg);
   display: flex;
   gap: 10px;
   align-items: center;
@@ -1398,11 +1398,11 @@ body.sheet-open {
   position: static;
   flex: 1;
   min-width: 0;
-  height: 56px;
-  padding: 0 18px;
+  height: 48px;
+  padding: 0 16px;
   gap: 10px;
-  border-radius: 28px;
-  background: var(--bar);
+  border-radius: 24px;
+  background: var(--surface);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1791,6 +1791,31 @@ body.sheet-open {
 .entry-summary > .btn {
   width: auto;
 }
-.rate-big b.empty {
+.rate-big b.is-empty {
   color: var(--surface-3);
+}
+
+/* Content scrolls under the translucent status bar; keep the clock readable. */
+.app::before {
+  content: '';
+  position: fixed;
+  z-index: 9;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top);
+  background: var(--bg);
+  pointer-events: none;
+}
+.search-screen {
+  padding-bottom: calc(max(16px, env(safe-area-inset-bottom)) + 24px);
+}
+.stat-strip {
+  margin-bottom: 12px;
+}
+.tab-pill {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.screen-header + .segmented.big {
+  margin-top: 0;
 }

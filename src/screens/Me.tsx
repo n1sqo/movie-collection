@@ -3,7 +3,7 @@ import { db } from '../db'
 import { useLiveQuery } from '../useLiveQuery'
 import { Screen } from '../components/Screen'
 import { displayGenres } from '../data/query'
-import { SettingsSections } from './Settings'
+import { formatAvg } from './Collection'
 
 async function loadWatched() {
   const entries = await db.entries.where('status').equals('watched').toArray()
@@ -15,14 +15,19 @@ export function Me() {
   return (
     <Screen title={t('titles.me')}>
       <MyStats />
-      <SettingsSections />
     </Screen>
   )
 }
 
 function MyStats() {
   const items = useLiveQuery(loadWatched)
-  if (!items || items.length === 0) return null
+  if (!items) return null
+  if (items.length === 0) return <p class="notice muted">{t('stats.empty')}</p>
+
+  const ratedItems = items.filter((i) => i.entry.myRating !== undefined)
+  const avg = ratedItems.length ? ratedItems.reduce((s, i) => s + i.entry.myRating!, 0) / ratedItems.length : undefined
+  const year = String(new Date().getFullYear())
+  const watchedThisYear = items.filter((i) => i.entry.watchedAt?.startsWith(year)).length
 
   const counts = Array.from({ length: 10 }, () => 0)
   for (const { entry } of items) if (entry.myRating) counts[entry.myRating - 1]++
@@ -38,6 +43,21 @@ function MyStats() {
 
   return (
     <>
+      <div class="stat-strip">
+        <div class="stat-tile">
+          <b>{items.length}</b>
+          <span>{t('stats.watchedShort')}</span>
+        </div>
+        <div class="stat-tile">
+          <b class="accent">{avg !== undefined ? formatAvg(avg) : '–'}</b>
+          <span>{t('stats.avgShort')}</span>
+        </div>
+        <div class="stat-tile">
+          <b>{watchedThisYear}</b>
+          <span>{t('stats.thisYear')}</span>
+        </div>
+      </div>
+
       {rated > 0 && (
         <section class="card">
           <div class="card-head">

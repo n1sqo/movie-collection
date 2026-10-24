@@ -340,7 +340,7 @@ function RatePanel({ movie, entry, onDone }: { movie: Movie; entry: Entry | null
   return (
     <div class="entry-box rate-panel">
       <div class="rate-big" aria-live="polite">
-        <b class={rating ? '' : 'empty'}>{rating ?? '–'}</b>
+        <b class={rating ? '' : 'is-empty'}>{rating ?? '–'}</b>
         <span>{rating ? t(`movie.ratingLabels.${rating}`) : t('movie.chooseRating')}</span>
       </div>
       <RatingPicker value={rating} onChange={setRating} />

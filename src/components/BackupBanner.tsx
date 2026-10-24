@@ -10,11 +10,11 @@ export function BackupBanner() {
   const [dismissed, setDismissed] = useState<string>()
   const status = backupStatus.value
   if (status.state !== 'error' || !SERIOUS.includes(status.kind) || dismissed === status.kind) return null
-  if (tab.value === 'me') return null
+  if (tab.value === 'options') return null
   return (
     <div class="banner error-banner">
       <span>{t('backup.banner').replace('{error}', t(`backup.errors.${status.kind}`))}</span>
-      <button class="banner-link" onClick={() => goTo('me')}>
+      <button class="banner-link" onClick={() => goTo('options')}>
         {t('backup.openSettings')}
       </button>
       <button class="banner-close" aria-label="close" onClick={() => setDismissed(status.kind)}>

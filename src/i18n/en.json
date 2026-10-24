@@ -3,7 +3,8 @@
     "search": "Find a movie",
     "collection": "Collection",
     "label": "Sections",
-    "me": "Me"
+    "me": "Me",
+    "options": "Options"
   },
   "titles": {
     "search": "Search",
@@ -213,7 +214,8 @@
     "avgShort": "average rating",
     "thisYear": "this year",
     "ratings": "My ratings",
-    "ratingsAria": "Rating distribution, most common {n}"
+    "ratingsAria": "Rating distribution, most common {n}",
+    "empty": "Stats appear here once you mark your first movie as Watched."
   },
   "update": {
     "available": "A new version is available",
