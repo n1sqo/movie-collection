@@ -2107,3 +2107,72 @@ body.sheet-open {
   font: 500 16px var(--font);
   outline: none;
 }
+
+/* TV series */
+.media-switch {
+  margin: 4px 0 12px;
+}
+.tv-badge {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 11px;
+  background: rgba(11, 11, 15, 0.78);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+}
+.seasons {
+  margin-top: 16px;
+}
+.seasons-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.seasons-head .muted {
+  flex: 1;
+  font-size: 13px;
+}
+.seasons-head .link {
+  font-size: 14px;
+}
+.season-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+.season {
+  height: 56px;
+  border-radius: 14px;
+  border: 0;
+  background: var(--surface-2);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font: inherit;
+}
+.season b {
+  font-size: 18px;
+  line-height: 1;
+}
+.season span {
+  font-size: 10px;
+  color: var(--secondary);
+}
+.season.on {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.season.on span {
+  color: var(--on-accent);
+  opacity: 0.75;
+}

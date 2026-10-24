@@ -1,5 +1,5 @@
 import type { Entry, Movie } from '../db'
-import { viewDates } from './collection'
+import { viewDates, watchMinutes } from './collection'
 import { displayGenres } from './query'
 
 export interface RecapItem {
@@ -39,7 +39,12 @@ export function yearRecap(items: RecapItem[], year: string, lang: 'uk' | 'en'): 
     .map((item) => ({ item, dates: viewDates(item.entry).filter((d) => d.startsWith(year)) }))
     .filter((x) => x.dates.length > 0)
   const dates = inYear.flatMap((x) => x.dates)
-  const minutes = inYear.reduce((sum, x) => sum + x.item.movie.runtime * x.dates.length, 0)
+  const minutes = inYear.reduce(
+    (sum, x) =>
+      sum +
+      (x.item.movie.kind === 'tv' ? watchMinutes(x.item.movie, x.item.entry) : x.item.movie.runtime * x.dates.length),
+    0
+  )
   const rated = inYear.filter((x) => x.item.entry.myRating !== undefined)
   // Highest rating wins; among equals, the one watched most recently this year.
   const best = [...rated].sort(

@@ -33,7 +33,12 @@
     "close": "Close search",
     "inList": "On list",
     "added": "Added to Watchlist",
-    "addToWatchlist": "Add to Watchlist"
+    "addToWatchlist": "Add to Watchlist",
+    "kind": "What to search",
+    "kinds": {
+      "movie": "Movies",
+      "tv": "TV shows"
+    }
   },
   "errors": {
     "unauthorized": "TMDB rejected the key. Check it in Settings.",
@@ -273,5 +278,27 @@
     "new": "New list",
     "placeholder": "List name",
     "hint": "Make a list to group movies: “with my wife”, “Christmas”…"
+  },
+  "tv": {
+    "series": "TV show",
+    "creators": "Created by",
+    "seasons": "Seasons",
+    "season": "Season",
+    "progress": "{n} of {total}",
+    "all": "All",
+    "none": "None",
+    "seasonCount": {
+      "one": "{n} season",
+      "other": "{n} seasons"
+    },
+    "episodes": {
+      "one": "{n} episode",
+      "other": "{n} episodes"
+    },
+    "episodesShort": {
+      "one": "{n} ep.",
+      "other": "{n} ep."
+    },
+    "filter": "TV shows"
   }
 }

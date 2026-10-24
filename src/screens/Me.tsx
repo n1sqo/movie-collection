@@ -4,7 +4,7 @@ import { useLiveQuery } from '../useLiveQuery'
 import { Screen } from '../components/Screen'
 import { displayGenres } from '../data/query'
 import { formatAvg } from './Collection'
-import { viewDates } from '../data/collection'
+import { viewDates, watchMinutes } from '../data/collection'
 import { signal } from '@preact/signals'
 import { Recap } from './Recap'
 import { recapYears } from '../data/recap'
@@ -231,10 +231,12 @@ function HoursCard({ items, year }: { items: Item[]; year: string }) {
   let minutes = 0
   let minutesThisYear = 0
   for (const { entry, movie } of items) {
-    const dates = viewDates(entry)
-    // A movie marked watched without a date still counts once.
-    minutes += movie.runtime * Math.max(1, dates.length)
-    minutesThisYear += movie.runtime * dates.filter((d) => d.startsWith(year)).length
+    minutes += watchMinutes(movie, entry)
+    const views = viewDates(entry)
+    const inYear = views.filter((d) => d.startsWith(year)).length
+    // A series counts in full for the year it was last watched.
+    minutesThisYear +=
+      movie.kind === 'tv' ? (views.at(-1)?.startsWith(year) ? watchMinutes(movie, entry) : 0) : movie.runtime * inYear
   }
   const hours = Math.round(minutes / 60)
   if (hours === 0) return null

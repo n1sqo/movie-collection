@@ -162,7 +162,11 @@ function WatchlistRow({ item, rating, onRate }: { item: Item; rating: boolean; o
         <div class="result-text">
           <div class="result-title">{title}</div>
           {other && other !== title && <div class="result-sub">{other}</div>}
-          {movie.year > 0 && <div class="result-year">{movie.year}</div>}
+          {(movie.year > 0 || movie.kind === 'tv') && (
+            <div class="result-year">
+              {[movie.kind === 'tv' ? t('tv.series') : '', movie.year || ''].filter(Boolean).join(' · ')}
+            </div>
+          )}
         </div>
         {!rating && (
           <div class="watch-actions">

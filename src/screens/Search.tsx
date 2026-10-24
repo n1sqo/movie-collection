@@ -2,7 +2,15 @@ import { useEffect, useState } from 'preact/hooks'
 import { lang, t } from '../i18n'
 import { tmdbToken } from '../settings'
 import { online } from '../useOnline'
-import { getMovieDetails, posterUrl, searchMovies, TmdbError, type SearchPage, type SearchResult } from '../api/tmdb'
+import {
+  getMovieDetails,
+  posterUrl,
+  searchMovies,
+  TmdbError,
+  type MediaKind,
+  type SearchPage,
+  type SearchResult
+} from '../api/tmdb'
 import { Screen } from '../components/Screen'
 import { closeSearch, goTo } from '../app'
 import { searchIcon } from '../components/TabBar'
@@ -18,22 +26,30 @@ const MIN_QUERY = 2
 type State =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'done'; query: string; data: SearchPage }
+  | { kind: 'done'; query: string; media: MediaKind; data: SearchPage }
   | { kind: 'error'; message: string }
 
 // Survive tab switches within a session.
 let lastQuery = ''
 let lastPage = 1
 let lastState: State = { kind: 'idle' }
+let lastMedia: MediaKind = 'movie'
 
 export function Search() {
   const [query, setQueryState] = useState(lastQuery)
   const [page, setPageState] = useState(lastPage)
   const [state, setState] = useState<State>(lastState)
+  const [media, setMediaState] = useState<MediaKind>(lastMedia)
 
   const setQuery = (q: string) => {
     lastQuery = q
     setQueryState(q)
+    lastPage = 1
+    setPageState(1)
+  }
+  const setMedia = (m: MediaKind) => {
+    lastMedia = m
+    setMediaState(m)
     lastPage = 1
     setPageState(1)
   }
@@ -54,14 +70,14 @@ export function Search() {
     }
     // Offline or no key: keep whatever is on screen.
     if (!tmdbToken.value || !online.value) return
-    if (state.kind === 'done' && state.query === q && state.data.page === page) return
+    if (state.kind === 'done' && state.query === q && state.media === media && state.data.page === page) return
     const controller = new AbortController()
     const timer = setTimeout(
       async () => {
         setState({ kind: 'loading' })
         try {
-          const data = await searchMovies(tmdbToken.value, q, page, lang.value, controller.signal)
-          setState({ kind: 'done', query: q, data })
+          const data = await searchMovies(tmdbToken.value, q, page, lang.value, controller.signal, media)
+          setState({ kind: 'done', query: q, media, data })
         } catch (err) {
           if ((err as Error).name === 'AbortError') return
           const kind = err instanceof TmdbError ? err.kind : 'network'
@@ -74,17 +90,31 @@ export function Search() {
       clearTimeout(timer)
       controller.abort()
     }
-  }, [query, page, tmdbToken.value, online.value])
+  }, [query, page, media, tmdbToken.value, online.value])
+  const current = state.kind === 'done' && state.query === query.trim() && state.media === media
 
   return (
     <Screen title={t('titles.search')}>
       <SearchBar query={query} onQuery={setQuery} />
-      {state.kind === 'done' && state.query === query.trim() && state.data.totalResults > 0 && (
+      <div class="segmented big media-switch" role="tablist" aria-label={t('search.kind')}>
+        {(['movie', 'tv'] as const).map((m) => (
+          <button
+            key={m}
+            role="tab"
+            aria-selected={media === m}
+            class={media === m ? 'active' : ''}
+            onClick={() => setMedia(m)}
+          >
+            {t(`search.kinds.${m}`)}
+          </button>
+        ))}
+      </div>
+      {current && state.data.totalResults > 0 && (
         <p class="result-count">
           {t('search.count').replace('{n}', String(state.data.totalResults)).replace('{q}', state.query)}
         </p>
       )}
-      <SearchBody state={state} query={query} page={page} onPage={setPage} />
+      <SearchBody state={state} current={current} query={query} page={page} onPage={setPage} />
     </Screen>
   )
 }
@@ -132,11 +162,13 @@ function SearchBar({ query, onQuery }: { query: string; onQuery: (q: string) => 
 
 function SearchBody({
   state,
+  current,
   query,
   page,
   onPage
 }: {
   state: State
+  current: boolean
   query: string
   page: number
   onPage: (p: number) => void
@@ -152,7 +184,7 @@ function SearchBody({
     )
   }
   const offlineNote = !online.value && <p class="inline-note">{t('search.offline')}</p>
-  if (state.kind === 'done' && state.query === query.trim()) {
+  if (state.kind === 'done' && current) {
     if (state.data.results.length === 0) return <p class="notice muted">{t('search.empty')}</p>
     return (
       <>

@@ -5,8 +5,17 @@ export interface CastMember {
   character: string
 }
 
+export interface Season {
+  number: number
+  episodes: number
+  airDate?: string
+}
+
 export interface Movie {
+  /** TMDB id; a TV series is stored under its id negated, since movie and TV ids overlap. */
   tmdbId: number
+  /** Absent for movies. */
+  kind?: 'tv'
   titleUk: string
   titleEn: string
   originalTitle: string
@@ -18,7 +27,10 @@ export interface Movie {
   cast: CastMember[]
   overviewUk: string
   overviewEn: string
+  /** Minutes; for a series, of a typical episode. */
   runtime: number
+  /** Series only: regular seasons, without specials. */
+  seasons?: Season[]
   tmdbRating: number
   posterPath: string
   posterBlob?: Blob
@@ -34,6 +46,8 @@ export interface Entry {
   rewatches?: string[]
   /** The user's own lists, e.g. «з дружиною». */
   tags?: string[]
+  /** Series only: numbers of the seasons watched in full. */
+  seasonsWatched?: number[]
   note?: string
   addedAt: string
   updatedAt: string

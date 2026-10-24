@@ -9,6 +9,8 @@ export interface Filters {
   person: string
   /** One of the user's lists; '' for all. */
   tag?: string
+  /** Only series. */
+  tvOnly?: boolean
   yearFrom?: number
   yearTo?: number
   ratingFrom?: number
@@ -23,7 +25,7 @@ export interface Item {
 export const emptyFilters: Filters = { text: '', genre: '', person: '' }
 
 export function activeFilterCount(f: Filters): number {
-  return [f.genre, f.person.trim(), f.yearFrom ?? f.yearTo, f.ratingFrom ?? f.ratingTo].filter(
+  return [f.tvOnly || undefined, f.genre, f.person.trim(), f.yearFrom ?? f.yearTo, f.ratingFrom ?? f.ratingTo].filter(
     (v) => v !== undefined && v !== ''
   ).length
 }
@@ -52,6 +54,7 @@ export function applyQuery(items: Item[], filters: Filters, sort: SortKey, asc: 
   const result = items.filter(({ movie, entry }) => {
     if (text && ![movie.titleUk, movie.titleEn, movie.originalTitle].some((title) => norm(title ?? '').includes(text)))
       return false
+    if (filters.tvOnly && movie.kind !== 'tv') return false
     if (filters.tag && !entry.tags?.includes(filters.tag)) return false
     if (filters.genre && ![...movie.genres, ...(movie.genresEn ?? [])].includes(filters.genre)) return false
     if (person && ![...movie.directors, ...movie.cast.map((c) => c.name)].some((name) => norm(name).includes(person)))

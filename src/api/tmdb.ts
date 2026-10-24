@@ -6,6 +6,12 @@ export function posterUrl(posterPath: string, size: string): string {
   return `${IMG}/${size}${posterPath}`
 }
 
+export type MediaKind = 'movie' | 'tv'
+
+/** Series live under negated TMDB ids (see Movie.tmdbId). */
+export const isTv = (id: number) => id < 0
+const tmdbPath = (id: number) => (isTv(id) ? `/tv/${-id}` : `/movie/${id}`)
+
 export type TmdbErrorKind = 'noKey' | 'unauthorized' | 'network' | 'rateLimit' | 'server'
 
 export class TmdbError extends Error {
@@ -25,9 +31,13 @@ export interface SearchResult {
 
 interface RawMovie {
   id: number
-  title: string
-  original_title: string
+  title?: string
+  original_title?: string
   release_date?: string
+  /** The TV search names these differently. */
+  name?: string
+  original_name?: string
+  first_air_date?: string
   poster_path?: string | null
 }
 
@@ -72,14 +82,15 @@ export async function searchMovies(
   query: string,
   page: number,
   primary: 'uk' | 'en',
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  kind: MediaKind = 'movie'
 ): Promise<SearchPage> {
   const q = encodeURIComponent(query)
   const [uk, en] = await Promise.all(
     (['uk-UA', 'en-US'] as const).map((language) =>
       request<{ results: RawMovie[]; total_pages?: number; total_results?: number }>(
         token,
-        `/search/movie?query=${q}&language=${language}&include_adult=false&page=${page}`,
+        `/search/${kind}?query=${q}&language=${language}&include_adult=false&page=${page}`,
         signal
       )
     )
@@ -92,14 +103,16 @@ export async function searchMovies(
   for (const m of order) {
     if (seen.has(m.id)) continue
     seen.add(m.id)
-    const ukTitle = ukById.get(m.id)?.title
-    const enTitle = enById.get(m.id)?.title
+    const title = (r?: RawMovie) => r?.title ?? r?.name
+    const ukTitle = title(ukById.get(m.id))
+    const enTitle = title(enById.get(m.id))
+    const date = m.release_date ?? m.first_air_date
     results.push({
-      id: m.id,
-      titleUk: ukTitle ?? enTitle ?? m.title,
-      titleEn: enTitle ?? ukTitle ?? m.title,
-      originalTitle: m.original_title,
-      year: m.release_date ? Number(m.release_date.slice(0, 4)) : undefined,
+      id: kind === 'tv' ? -m.id : m.id,
+      titleUk: ukTitle ?? enTitle ?? title(m) ?? '',
+      titleEn: enTitle ?? ukTitle ?? title(m) ?? '',
+      originalTitle: m.original_title ?? m.original_name ?? '',
+      year: date ? Number(date.slice(0, 4)) : undefined,
       posterPath: m.poster_path ?? undefined
     })
   }
@@ -124,7 +137,57 @@ interface RawDetails {
   }
 }
 
+interface RawTvDetails {
+  id: number
+  name: string
+  original_name: string
+  first_air_date?: string
+  genres: { id: number; name: string }[]
+  overview: string
+  episode_run_time?: number[]
+  last_episode_to_air?: { runtime?: number | null } | null
+  vote_average: number
+  poster_path: string | null
+  created_by?: { name: string }[]
+  seasons?: { season_number: number; episode_count: number; air_date?: string | null }[]
+  credits?: RawDetails['credits']
+}
+
+async function getTvDetails(token: string, id: number): Promise<Movie> {
+  const [uk, en] = await Promise.all([
+    request<RawTvDetails>(token, `/tv/${id}?language=uk-UA&append_to_response=credits`),
+    request<RawTvDetails>(token, `/tv/${id}?language=en-US`)
+  ])
+  const cast = uk.credits?.cast ?? []
+  return {
+    tmdbId: -uk.id,
+    kind: 'tv',
+    titleUk: uk.name,
+    titleEn: en.name,
+    originalTitle: uk.original_name,
+    year: uk.first_air_date ? Number(uk.first_air_date.slice(0, 4)) : 0,
+    releaseDate: uk.first_air_date ?? '',
+    genres: uk.genres.map((g) => g.name),
+    genresEn: en.genres.map((g) => g.name),
+    directors: (uk.created_by ?? []).map((c) => c.name),
+    cast: [...cast]
+      .sort((a, b) => a.order - b.order)
+      .slice(0, 10)
+      .map((c) => ({ name: c.name, character: c.character })),
+    overviewUk: uk.overview,
+    overviewEn: en.overview,
+    // TMDB leaves episode_run_time empty for many newer shows.
+    runtime: uk.episode_run_time?.[0] ?? uk.last_episode_to_air?.runtime ?? 0,
+    seasons: (uk.seasons ?? [])
+      .filter((s) => s.season_number > 0 && s.episode_count > 0)
+      .map((s) => ({ number: s.season_number, episodes: s.episode_count, airDate: s.air_date ?? undefined })),
+    tmdbRating: Math.round(uk.vote_average * 10) / 10,
+    posterPath: uk.poster_path ?? en.poster_path ?? ''
+  }
+}
+
 export async function getMovieDetails(token: string, id: number): Promise<Movie> {
+  if (isTv(id)) return getTvDetails(token, -id)
   const [uk, en] = await Promise.all([
     request<RawDetails>(token, `/movie/${id}?language=uk-UA&append_to_response=credits`),
     request<RawDetails>(token, `/movie/${id}?language=en-US`)
@@ -179,7 +242,7 @@ export async function getTrailerKey(token: string, id: number, signal?: AbortSig
   for (const language of ['uk-UA', 'en-US']) {
     const { results } = await request<{ results: RawVideo[] }>(
       token,
-      `/movie/${id}/videos?language=${language}`,
+      `${tmdbPath(id)}/videos?language=${language}`,
       signal
     )
     const best = results

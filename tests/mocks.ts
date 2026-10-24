@@ -19,6 +19,17 @@ export function rawMovie(id: number, lang: 'uk' | 'en') {
   }
 }
 
+export function rawShow(id: number, lang: 'uk' | 'en') {
+  return {
+    id,
+    name: lang === 'uk' ? `Серіал ${id}` : `Show ${id}`,
+    original_name: `Show ${id}`,
+    first_air_date: '2019-01-01',
+    poster_path: `/s${id}.jpg`,
+    vote_average: 8
+  }
+}
+
 /** Fake TMDB: 140 results over 7 pages, details for any id, a trailer only in English. */
 export async function mockTmdb(ctx: BrowserContext) {
   await ctx.route('https://api.themoviedb.org/**', (route) => {
@@ -38,6 +49,30 @@ export async function mockTmdb(ctx: BrowserContext) {
             ]
           : []
       return route.fulfill({ json: { results } })
+    }
+    // Series ids overlap movie ids on purpose, as they do on TMDB.
+    if (url.pathname.endsWith('/search/tv')) {
+      const results = Array.from({ length: 3 }, (_, i) => rawShow(i + 1, lang))
+      return route.fulfill({ json: { page: 1, results, total_pages: 1, total_results: 3 } })
+    }
+    const tv = url.pathname.match(/\/tv\/(\d+)$/)
+    if (tv) {
+      return route.fulfill({
+        json: {
+          ...rawShow(Number(tv[1]), lang),
+          genres: [{ id: 1, name: lang === 'uk' ? 'Драма' : 'Drama' }],
+          overview: lang === 'uk' ? 'Опис серіалу' : 'Show overview',
+          episode_run_time: [],
+          last_episode_to_air: { runtime: 50 },
+          created_by: [{ name: 'Creator' }],
+          seasons: [
+            { season_number: 0, episode_count: 3 },
+            { season_number: 1, episode_count: 8, air_date: '2019-01-01' },
+            { season_number: 2, episode_count: 10, air_date: '2021-01-01' }
+          ],
+          credits: { cast: [{ name: 'Actor', character: 'Hero', order: 0 }], crew: [] }
+        }
+      })
     }
     const id = Number(url.pathname.split('/').pop())
     return route.fulfill({

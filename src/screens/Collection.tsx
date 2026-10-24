@@ -97,6 +97,7 @@ export function Collection() {
     )
   }
 
+  const hasSeries = items.some((i) => i.movie.kind === 'tv')
   const highOnly = filters.ratingFrom === 9 && filters.ratingTo === undefined
 
   return (
@@ -178,6 +179,15 @@ export function Collection() {
             >
               9–10
             </button>
+            {hasSeries && (
+              <button
+                class={filters.tvOnly ? 'chip on' : 'chip'}
+                aria-pressed={!!filters.tvOnly}
+                onClick={() => setFilters({ ...filters, tvOnly: !filters.tvOnly || undefined })}
+              >
+                {t('tv.filter')}
+              </button>
+            )}
             <TagChips />
             {topGenres.map((g) => (
               <button
@@ -227,6 +237,7 @@ function PosterTile({ item }: { item: Item }) {
     <button class="poster-tile" onClick={() => (openMovie.value = { id: movie.tmdbId })} aria-label={title}>
       {url ? <img src={url} alt="" loading="lazy" /> : <div class="poster-fallback">{title}</div>}
       {entry.myRating !== undefined && <span class="rating-badge">{entry.myRating}</span>}
+      {movie.kind === 'tv' && <span class="tv-badge">{t('tv.series')}</span>}
     </button>
   )
 }

@@ -158,8 +158,15 @@ function MovieSheet({ id, preview, onClose }: { id: number; preview?: SheetPrevi
                 {original && original !== titleUk && original !== titleEn && <div class="movie-sub">{original}</div>}
                 <div class="movie-meta">
                   {[
+                    movie?.kind === 'tv' ? t('tv.series') : '',
                     movie?.year || preview?.year,
-                    movie?.runtime ? formatRuntime(movie.runtime) : '',
+                    movie?.kind === 'tv'
+                      ? movie.seasons?.length
+                        ? tn('tv.seasonCount', movie.seasons.length)
+                        : ''
+                      : movie?.runtime
+                        ? formatRuntime(movie.runtime)
+                        : '',
                     movie ? (displayGenres(movie, lang.value)[0] ?? '') : ''
                   ]
                     .filter(Boolean)
@@ -169,6 +176,7 @@ function MovieSheet({ id, preview, onClose }: { id: number; preview?: SheetPrevi
             </div>
 
             {movie && entry !== undefined && <EntryEditor movie={movie} entry={entry} />}
+            {movie?.kind === 'tv' && entry && <SeasonsEditor movie={movie} entry={entry} />}
             {entry && <TagEditor entry={entry} />}
 
             {!movie && !error && <div class="spinner" aria-busy="true" />}
@@ -216,7 +224,7 @@ function MovieDetails({ movie }: { movie: Movie }) {
       )}
       {movie.directors.length > 0 && (
         <section>
-          <h2 class="section-h">{t('movie.director')}</h2>
+          <h2 class="section-h">{t(movie.kind === 'tv' ? 'tv.creators' : 'movie.director')}</h2>
           <p>{movie.directors.join(', ')}</p>
         </section>
       )}
@@ -234,6 +242,46 @@ function MovieDetails({ movie }: { movie: Movie }) {
         </section>
       )}
     </div>
+  )
+}
+
+/** Season grid for a series: tap a season once it is watched in full. */
+function SeasonsEditor({ movie, entry }: { movie: Movie; entry: Entry }) {
+  const seasons = movie.seasons ?? []
+  if (seasons.length === 0) return null
+  const done = new Set(entry.seasonsWatched ?? [])
+  const save = (next: number[]) =>
+    updateEntry(entry.tmdbId, { seasonsWatched: next.length ? next.sort((a, b) => a - b) : undefined })
+  const toggle = (n: number) => save(done.has(n) ? [...done].filter((x) => x !== n) : [...done, n])
+  const allDone = seasons.every((s) => done.has(s.number))
+  return (
+    <section class="seasons">
+      <div class="seasons-head">
+        <span class="entry-label">{t('tv.seasons')}</span>
+        <span class="muted">
+          {t('tv.progress')
+            .replace('{n}', String(seasons.filter((s) => done.has(s.number)).length))
+            .replace('{total}', String(seasons.length))}
+        </span>
+        <button class="link" onClick={() => save(allDone ? [] : seasons.map((s) => s.number))}>
+          {t(allDone ? 'tv.none' : 'tv.all')}
+        </button>
+      </div>
+      <div class="season-grid">
+        {seasons.map((s) => (
+          <button
+            key={s.number}
+            class={done.has(s.number) ? 'season on' : 'season'}
+            aria-pressed={done.has(s.number)}
+            aria-label={`${t('tv.season')} ${s.number}, ${tn('tv.episodes', s.episodes)}`}
+            onClick={() => toggle(s.number)}
+          >
+            <b>{s.number}</b>
+            <span>{tn('tv.episodesShort', s.episodes)}</span>
+          </button>
+        ))}
+      </div>
+    </section>
   )
 }
 

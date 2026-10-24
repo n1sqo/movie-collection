@@ -51,6 +51,18 @@ export async function moveToWatchlist(tmdbId: number): Promise<void> {
   await updateEntry(tmdbId, { status: 'watchlist', myRating: undefined, watchedAt: undefined, rewatches: undefined })
 }
 
+/**
+ * Minutes spent on a title: a movie's runtime per view; for a series, its episodes
+ * in the seasons marked watched, or all of them when it is watched without seasons marked.
+ */
+export function watchMinutes(movie: Movie, entry: Entry): number {
+  if (movie.kind !== 'tv') return movie.runtime * Math.max(1, viewDates(entry).length)
+  const seasons = movie.seasons ?? []
+  const marked = new Set(entry.seasonsWatched ?? [])
+  const counted = marked.size ? seasons.filter((s) => marked.has(s.number)) : entry.status === 'watched' ? seasons : []
+  return movie.runtime * counted.reduce((sum, s) => sum + s.episodes, 0)
+}
+
 /** Every date the movie was watched: the first view, then re-watches. */
 export function viewDates(entry: Pick<Entry, 'watchedAt' | 'rewatches'>): string[] {
   return [...(entry.watchedAt ? [entry.watchedAt] : []), ...(entry.rewatches ?? [])]

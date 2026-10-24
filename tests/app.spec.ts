@@ -396,3 +396,39 @@ test('lists: tag movies in the sheet and filter by a list', async ({ page }) => 
   await expect(page.locator('.chip-row').getByRole('button', { name: 'з дружиною' })).toHaveCount(0)
   await expect(page.locator('.poster-tile')).toHaveCount(3)
 })
+
+test('series: search, seasons, rating and hours, next to a movie with the same TMDB id', async ({ page }) => {
+  await search(page, 'film')
+  await page.locator('.result').first().click()
+  await page.getByRole('button', { name: 'Бачив', exact: true }).click()
+  await page.locator('.rating-picker button', { hasText: /^7$/ }).click()
+  await closeSheet(page)
+
+  await page.getByRole('tab', { name: 'Серіали' }).click()
+  await expect(page.locator('.result-title').first()).toHaveText('Серіал 1')
+  await page.locator('.result').first().click()
+  await expect(page.locator('.movie-meta')).toContainText('Серіал · 2019 · 2 сезони · Драма')
+  await page.getByRole('button', { name: 'Бачив', exact: true }).click()
+  await page.locator('.rating-picker button', { hasText: /^9$/ }).click()
+  await page.getByRole('button', { name: 'Готово' }).click()
+  await expect(page.locator('.seasons-head')).toContainText('0 з 2')
+  await page.getByRole('button', { name: 'Сезон 1, 8 серій' }).click()
+  await expect(page.locator('.seasons-head')).toContainText('1 з 2')
+  await expect(page.getByRole('heading', { name: 'Автори' })).toBeVisible()
+  await closeSheet(page)
+  // The movie with id 1 kept its own rating.
+  await expect(page.locator('.result').first().locator('.status-pill')).toContainText('9')
+  await page.getByRole('tab', { name: 'Фільми' }).click()
+  await expect(page.locator('.result').first().locator('.status-pill')).toContainText('7')
+
+  await goTo(page, 'Колекція')
+  await expect(page.locator('.poster-tile')).toHaveCount(2)
+  await expect(page.locator('.tv-badge')).toHaveCount(1)
+  await page.locator('.chip-row').getByRole('button', { name: 'Серіали' }).click()
+  await expect(page.locator('.poster-tile')).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Серіал 1', exact: true })).toBeVisible()
+
+  // 2 h for the movie plus 8 episodes × 50 min.
+  await goTo(page, 'Я')
+  await expect(page.locator('.hours-card')).toContainText('9год у кіно')
+})
