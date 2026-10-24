@@ -317,3 +317,35 @@ test('backup merges remote changes and keeps deletions', async ({ context, page 
   expect(afterDelete.entries.map((e: { tmdbId: number }) => e.tmdbId)).toEqual([99])
   expect(afterDelete.deleted.map((d: { tmdbId: number }) => d.tmdbId)).toEqual([1])
 })
+
+test('my year in movies: recap and a shareable picture', async ({ page }) => {
+  await search(page, 'film')
+  for (const [n, rating] of [
+    [0, 7],
+    [1, 9]
+  ]) {
+    await page.locator('.result').nth(n).click()
+    await page.getByRole('button', { name: 'Бачив', exact: true }).click()
+    await page.locator('.rating-picker button', { hasText: new RegExp(`^${rating}$`) }).click()
+    await closeSheet(page)
+  }
+  await goTo(page, 'Я')
+  const year = String(new Date().getFullYear())
+  await page.getByRole('button', { name: new RegExp(`Мій ${year} у кіно`) }).click()
+  await expect(page.locator('.recap-year')).toHaveText(year)
+  await expect(page.locator('.recap-stats .stat-tile').first()).toContainText('2фільми')
+  await expect(page.locator('.recap-stats .stat-tile').nth(1)).toContainText('4')
+  await expect(page.locator('.recap-stats .stat-tile').nth(2)).toContainText('8,0')
+  await expect(page.locator('.recap-best')).toContainText('Фільм 2')
+  await expect(page.locator('.recap-facts')).toContainText('Драма')
+  await expect(page.locator('.recap-facts')).toContainText('Director')
+
+  // No Web Share in desktop Chromium, so the picture downloads instead.
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Поділитися картинкою' }).click()
+  const file = await download
+  expect(file.suggestedFilename()).toBe(`kino-${year}.png`)
+
+  await page.getByRole('button', { name: 'Назад до «Я»' }).click()
+  await expect(page.locator('.hours-card')).toBeVisible()
+})

@@ -1965,3 +1965,112 @@ body.sheet-open {
   color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
+
+/* «Мій рік у кіно» */
+.recap-entry {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 0;
+  text-align: left;
+  color: var(--text);
+  font: inherit;
+  background: linear-gradient(135deg, rgba(255, 181, 71, 0.22), var(--surface) 70%);
+}
+.recap-entry > span {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.recap-entry b {
+  font-size: 17px;
+}
+.recap-entry .muted {
+  font-size: 13px;
+}
+.recap-entry svg {
+  color: var(--accent);
+}
+.recap .screen-header {
+  margin-bottom: 8px;
+}
+.recap-kicker {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.recap-year {
+  margin: 0 0 12px;
+  font-size: 72px;
+  font-weight: 800;
+  letter-spacing: -2px;
+  line-height: 1;
+}
+.recap .chip-row {
+  margin-bottom: 16px;
+}
+.recap-views {
+  margin: -4px 0 12px;
+  text-align: left;
+}
+.recap-best {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.recap-best img,
+.recap-poster {
+  flex: none;
+  width: 96px;
+  aspect-ratio: 2 / 3;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+.recap-best-title {
+  margin: 4px 0 8px;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.recap-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.recap-facts div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.recap-facts span {
+  font-size: 13px;
+  color: var(--secondary);
+}
+.recap-facts b {
+  font-size: 18px;
+}
+.recap-facts:empty {
+  display: none;
+}
+.recap > .btn {
+  margin: 4px 0 24px;
+}
+.recap-rating {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.recap-rating b {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--accent);
+}
+.recap-rating span {
+  font-size: 16px;
+  color: var(--secondary);
+}

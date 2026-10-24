@@ -245,5 +245,27 @@
   "update": {
     "available": "A new version is available",
     "reload": "Update"
+  },
+  "recap": {
+    "title": "My {year} in movies",
+    "kicker": "My year in movies",
+    "teaser": "Year recap: best movie, hours, favourite genre",
+    "back": "Back to Me",
+    "years": "Year",
+    "best": "Best movie",
+    "genre": "Favourite genre",
+    "director": "Favourite director",
+    "month": "Busiest month",
+    "share": "Share as picture",
+    "shareFailed": "Couldn't create the picture",
+    "footer": "Movie shelf",
+    "withRewatches": {
+      "one": "With re-watches: {n} view",
+      "other": "With re-watches: {n} views"
+    },
+    "filmsWord": {
+      "one": "movie",
+      "other": "movies"
+    }
   }
 }

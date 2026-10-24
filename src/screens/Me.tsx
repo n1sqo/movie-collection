@@ -5,6 +5,9 @@ import { Screen } from '../components/Screen'
 import { displayGenres } from '../data/query'
 import { formatAvg } from './Collection'
 import { viewDates } from '../data/collection'
+import { signal } from '@preact/signals'
+import { Recap } from './Recap'
+import { recapYears } from '../data/recap'
 
 type Item = { entry: Entry; movie: Movie }
 
@@ -14,12 +17,27 @@ async function loadWatched() {
   return entries.flatMap((entry, i) => (movies[i] ? [{ entry, movie: movies[i]! }] : []))
 }
 
+/** The year shown in «Мій рік у кіно», or none for the main «Я» page. */
+const recapYear = signal<string | undefined>(undefined)
+
+function openRecap(year: string | undefined) {
+  recapYear.value = year
+  window.scrollTo(0, 0)
+}
+
 export function Me() {
+  if (recapYear.value) return <RecapPage year={recapYear.value} />
   return (
     <Screen title={t('titles.me')}>
       <MyStats />
     </Screen>
   )
+}
+
+function RecapPage({ year }: { year: string }) {
+  const items = useLiveQuery(loadWatched)
+  if (!items) return null
+  return <Recap items={items} year={year} onYear={openRecap} onBack={() => openRecap(undefined)} />
 }
 
 function MyStats() {
@@ -30,6 +48,7 @@ function MyStats() {
   const ratedItems = items.filter((i) => i.entry.myRating !== undefined)
   const avg = ratedItems.length ? ratedItems.reduce((s, i) => s + i.entry.myRating!, 0) / ratedItems.length : undefined
   const year = String(new Date().getFullYear())
+  const lastYearOfViews = recapYears(items)[0]
   const views = items.flatMap((i) => viewDates(i.entry))
   const watchedThisYear = items.filter((i) => viewDates(i.entry).some((d) => d.startsWith(year))).length
 
@@ -61,6 +80,27 @@ function MyStats() {
           <span>{t('stats.thisYear')}</span>
         </div>
       </div>
+
+      {lastYearOfViews && (
+        <button class="card recap-entry" onClick={() => openRecap(lastYearOfViews)}>
+          <span>
+            <b>{t('recap.title').replace('{year}', lastYearOfViews)}</b>
+            <span class="muted">{t('recap.teaser')}</span>
+          </span>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            aria-hidden="true"
+          >
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </button>
+      )}
 
       <HoursCard items={items} year={year} />
 
