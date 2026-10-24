@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'preact/hooks'
+import { useMemo, useRef, useState } from 'preact/hooks'
 import { lang, t, tn } from '../i18n'
 import { db } from '../db'
 import { useLiveQuery } from '../useLiveQuery'
@@ -6,7 +6,7 @@ import { usePosterUrl } from '../usePosterUrl'
 import { RatingPicker } from '../components/RatingPicker'
 import { openMovie } from '../components/MovieSheet'
 import { showToast } from '../components/Toast'
-import { removeFromCollection, today, undoRemove, updateEntry } from '../data/collection'
+import { moveToWatchlist, removeFromCollection, today, undoRemove, updateEntry } from '../data/collection'
 import { applyQuery, displayTitle, emptyFilters, type Item, type SortKey } from '../data/query'
 import { goTo } from '../app'
 
@@ -100,6 +100,7 @@ export function WatchlistBody() {
         </button>
       </div>
       {text && <div class="collection-count">{tn('collection.count', visible.length)}</div>}
+      {visible.length > 0 && <p class="hint swipe-tip">{t('watchlist.swipeHint')}</p>}
       {items && visible.length === 0 && <p class="notice muted">{t('collection.noMatch')}</p>}
       <ul class="results">
         {visible.map((item) => (
@@ -125,10 +126,33 @@ function WatchlistRow({ item, rating, onRate }: { item: Item; rating: boolean; o
     const removed = await removeFromCollection(movie.tmdbId)
     if (removed) showToast(t('movie.removed'), { label: t('movie.undo'), run: () => undoRemove(removed) })
   }
+  async function rate(myRating: number) {
+    onRate(false)
+    await updateEntry(movie.tmdbId, { status: 'watched', myRating, watchedAt: today() })
+    showToast(t('watchlist.movedToWatched').replace('{n}', String(myRating)), {
+      label: t('movie.undo'),
+      run: () => moveToWatchlist(movie.tmdbId)
+    })
+  }
+  const swipe = useSwipe({ onRight: () => onRate(true), onLeft: () => void remove() })
 
   return (
     <li class="result watch-row">
-      <div class="watch-main" onClick={() => (openMovie.value = { id: movie.tmdbId })}>
+      <div class="swipe-hint left" aria-hidden="true" style={{ opacity: swipe.dx > 0 ? 1 : 0 }}>
+        {t('watchlist.watched')}
+      </div>
+      <div class="swipe-hint right" aria-hidden="true" style={{ opacity: swipe.dx < 0 ? 1 : 0 }}>
+        {t('watchlist.remove')}
+      </div>
+      <div
+        class="watch-main"
+        style={{
+          transform: swipe.dx ? `translateX(${swipe.dx}px)` : undefined,
+          transition: swipe.active ? 'none' : undefined
+        }}
+        {...swipe.handlers}
+        onClick={() => !swipe.moved() && (openMovie.value = { id: movie.tmdbId })}
+      >
         {url ? <img class="thumb" src={url} alt="" loading="lazy" /> : <div class="thumb placeholder" />}
         <div class="result-text">
           <div class="result-title">{title}</div>
@@ -167,13 +191,7 @@ function WatchlistRow({ item, rating, onRate }: { item: Item; rating: boolean; o
       {rating && (
         <div class="watch-rate">
           <div class="entry-label">{t('watchlist.rate')}</div>
-          <RatingPicker
-            onChange={(myRating) => {
-              if (!myRating) return
-              onRate(false)
-              updateEntry(movie.tmdbId, { status: 'watched', myRating, watchedAt: today() })
-            }}
-          />
+          <RatingPicker onChange={(myRating) => myRating && void rate(myRating)} />
           <button class="link" onClick={() => onRate(false)}>
             {t('watchlist.cancel')}
           </button>
@@ -181,4 +199,48 @@ function WatchlistRow({ item, rating, onRate }: { item: Item; rating: boolean; o
       )}
     </li>
   )
+}
+
+const SWIPE_PX = 80
+
+/** Horizontal swipe on a row: right opens the rating, left removes. Vertical drags still scroll. */
+function useSwipe({ onRight, onLeft }: { onRight: () => void; onLeft: () => void }) {
+  const [dx, setDx] = useState(0)
+  const [active, setActive] = useState(false)
+  const start = useRef<{ x: number; y: number; horizontal?: boolean } | null>(null)
+  const wasSwipe = useRef(false)
+  // Read on touchend, which can fire before the last move has re-rendered.
+  const last = useRef(0)
+  return {
+    dx,
+    active,
+    moved: () => wasSwipe.current,
+    handlers: {
+      onTouchStart: (e: TouchEvent) => {
+        start.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+        wasSwipe.current = false
+      },
+      onTouchMove: (e: TouchEvent) => {
+        const s = start.current
+        if (!s) return
+        const x = e.touches[0].clientX - s.x
+        const y = e.touches[0].clientY - s.y
+        if (s.horizontal === undefined && Math.abs(x) + Math.abs(y) > 10) s.horizontal = Math.abs(x) > Math.abs(y)
+        if (!s.horizontal) return
+        wasSwipe.current = true
+        setActive(true)
+        last.current = Math.max(-140, Math.min(140, x))
+        setDx(last.current)
+      },
+      onTouchEnd: () => {
+        const d = last.current
+        last.current = 0
+        start.current = null
+        setActive(false)
+        setDx(0)
+        if (d >= SWIPE_PX) onRight()
+        else if (d <= -SWIPE_PX) onLeft()
+      }
+    }
+  }
 }

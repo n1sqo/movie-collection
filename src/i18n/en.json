@@ -159,7 +159,9 @@
     "rate": "Your rating?",
     "cancel": "Cancel",
     "search": "Search watchlist",
-    "remove": "Remove from watchlist"
+    "remove": "Remove from watchlist",
+    "movedToWatched": "Moved to Watched, rated {n}",
+    "swipeHint": "Swipe right to rate, left to remove"
   },
   "backup": {
     "title": "GitHub backup",

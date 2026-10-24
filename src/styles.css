@@ -1838,3 +1838,42 @@ body.sheet-open {
 .app {
   min-height: calc(100vh + var(--top-inset));
 }
+
+/* Swipe on «Подивитись» rows */
+.watch-row {
+  position: relative;
+  overflow: hidden;
+}
+.watch-main {
+  position: relative;
+  z-index: 1;
+  background: var(--bg);
+  touch-action: pan-y;
+  transition: transform 0.2s ease;
+}
+.swipe-hint {
+  position: absolute;
+  top: 8px;
+  height: 78px;
+  left: 0;
+  right: 0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  font-size: 15px;
+  font-weight: 700;
+  transition: opacity 0.15s;
+}
+.swipe-hint.left {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.swipe-hint.right {
+  justify-content: flex-end;
+  background: var(--red);
+  color: var(--on-accent);
+}
+.swipe-tip {
+  margin: 12px 0 0;
+}

@@ -8,6 +8,7 @@ import {
   search,
   setTmdbToken,
   setupBackup,
+  swipe,
   type FakeRepo
 } from './mocks'
 
@@ -160,6 +161,32 @@ test('watchlist: mark watched with a rating and remove', async ({ page }) => {
   await expect(page.locator('.watch-row')).toHaveCount(0)
   await page.getByRole('tab', { name: /Бачив · 1/ }).click()
   await expect(page.locator('.poster-tile')).toHaveCount(1)
+})
+
+test('watchlist swipe: right to rate (with undo), left to remove', async ({ page }) => {
+  await search(page, 'film')
+  for (const n of [0, 1]) {
+    await page.locator('.result').nth(n).getByRole('button', { name: 'Додати в «Подивитись»' }).click()
+    await expect(page.locator('.result').nth(n).locator('.status-pill')).toHaveText('У списку')
+  }
+  await goTo(page, 'Колекція')
+  await page.getByRole('tab', { name: /Подивитись/ }).click()
+  await expect(page.locator('.watch-row')).toHaveCount(2)
+
+  await swipe(page, '.watch-row >> nth=0 >> .watch-main', 120)
+  await page.locator('.watch-row').first().locator('.rating-picker button', { hasText: /^9$/ }).click()
+  await expect(page.locator('.toast')).toContainText('оцінкою 9')
+  await expect(page.locator('.watch-row')).toHaveCount(1)
+  await page.locator('.toast button').click()
+  await expect(page.locator('.watch-row')).toHaveCount(2)
+
+  // A short drag does nothing; a long one to the left removes.
+  await swipe(page, '.watch-row >> nth=0 >> .watch-main', -40)
+  await expect(page.locator('.watch-row')).toHaveCount(2)
+  await expect(page.locator('.sheet')).toHaveCount(0)
+  await swipe(page, '.watch-row >> nth=0 >> .watch-main', -120)
+  await expect(page.locator('.watch-row')).toHaveCount(1)
+  await expect(page.locator('.toast')).toContainText('Фільм видалено')
 })
 
 test('Me: rating histogram and favourite genres', async ({ page }) => {

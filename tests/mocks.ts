@@ -126,3 +126,25 @@ export async function search(page: Page, query: string) {
   await page.fill('.search-bar input', query)
   await page.locator('.result').first().waitFor()
 }
+
+/** Drags a finger horizontally across an element with real touch events. */
+export async function swipe(page: Page, selector: string, dx: number) {
+  await page.locator(selector).evaluate((el, dx) => {
+    const r = el.getBoundingClientRect()
+    const y = r.top + r.height / 2
+    const x0 = r.left + r.width / 2
+    const touch = (x: number) => new Touch({ identifier: 1, target: el, clientX: x, clientY: y })
+    const fire = (type: string, x: number) =>
+      el.dispatchEvent(
+        new TouchEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          touches: type === 'touchend' ? [] : [touch(x)],
+          changedTouches: [touch(x)]
+        })
+      )
+    fire('touchstart', x0)
+    for (let i = 1; i <= 6; i++) fire('touchmove', x0 + (dx * i) / 6)
+    fire('touchend', x0 + dx)
+  }, dx)
+}
