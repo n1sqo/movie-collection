@@ -6,6 +6,7 @@ import { usePosterUrl } from '../usePosterUrl'
 import { RatingPicker } from '../components/RatingPicker'
 import { openMovie } from '../components/MovieSheet'
 import { showToast } from '../components/Toast'
+import { activeTag, TagChips } from '../components/Tags'
 import { moveToWatchlist, removeFromCollection, today, undoRemove, updateEntry } from '../data/collection'
 import { applyQuery, displayTitle, emptyFilters, type Item, type SortKey } from '../data/query'
 import { goTo } from '../app'
@@ -40,8 +41,11 @@ export function WatchlistBody() {
     } catch {}
   }
   const visible = useMemo(
-    () => (items ? applyQuery(items, { ...emptyFilters, text }, prefs.sort, prefs.asc, lang.value) : []),
-    [items, text, prefs, lang.value]
+    () =>
+      items
+        ? applyQuery(items, { ...emptyFilters, text, tag: activeTag.value }, prefs.sort, prefs.asc, lang.value)
+        : [],
+    [items, text, prefs, lang.value, activeTag.value]
   )
 
   if (items && items.length === 0) {
@@ -98,8 +102,9 @@ export function WatchlistBody() {
             <path fill="currentColor" d="M11 4h2v12.2l4.6-4.6 1.4 1.4-7 7-7-7 1.4-1.4 4.6 4.6V4Z" />
           </svg>
         </button>
+        <TagChips />
       </div>
-      {text && <div class="collection-count">{tn('collection.count', visible.length)}</div>}
+      {(text || activeTag.value) && <div class="collection-count">{tn('collection.count', visible.length)}</div>}
       {visible.length > 0 && <p class="hint swipe-tip">{t('watchlist.swipeHint')}</p>}
       {items && visible.length === 0 && <p class="notice muted">{t('collection.noMatch')}</p>}
       <ul class="results">

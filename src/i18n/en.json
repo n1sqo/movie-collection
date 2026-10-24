@@ -267,5 +267,11 @@
       "one": "movie",
       "other": "movies"
     }
+  },
+  "tags": {
+    "title": "Lists",
+    "new": "New list",
+    "placeholder": "List name",
+    "hint": "Make a list to group movies: “with my wife”, “Christmas”…"
   }
 }

@@ -5,6 +5,7 @@ import { db } from '../db'
 import { useLiveQuery } from '../useLiveQuery'
 import { usePosterUrl } from '../usePosterUrl'
 import { Screen } from '../components/Screen'
+import { activeTag, TagChips } from '../components/Tags'
 import { openMovie } from '../components/MovieSheet'
 import { goTo } from '../app'
 import { WatchlistBody } from './Watchlist'
@@ -67,8 +68,8 @@ export function Collection() {
   }
 
   const visible = useMemo(
-    () => (items ? applyQuery(items, filters, prefs.sort, prefs.asc, lang.value) : []),
-    [items, filters, prefs, lang.value]
+    () => (items ? applyQuery(items, { ...filters, tag: activeTag.value }, prefs.sort, prefs.asc, lang.value) : []),
+    [items, filters, prefs, lang.value, activeTag.value]
   )
   const topGenres = useMemo(() => {
     const counts = new Map<string, number>()
@@ -79,7 +80,7 @@ export function Collection() {
       .slice(0, 3)
       .map(([g]) => g)
   }, [items, lang.value])
-  const filterCount = activeFilterCount(filters) + (filters.text ? 1 : 0)
+  const filterCount = activeFilterCount(filters) + (filters.text ? 1 : 0) + (activeTag.value ? 1 : 0)
 
   if (items === undefined || watchlistCount === undefined) return <Screen title={t('titles.collection')} />
 
@@ -177,6 +178,7 @@ export function Collection() {
             >
               9–10
             </button>
+            <TagChips />
             {topGenres.map((g) => (
               <button
                 key={g}

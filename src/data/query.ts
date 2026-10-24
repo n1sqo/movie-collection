@@ -7,6 +7,8 @@ export interface Filters {
   text: string
   genre: string
   person: string
+  /** One of the user's lists; '' for all. */
+  tag?: string
   yearFrom?: number
   yearTo?: number
   ratingFrom?: number
@@ -50,6 +52,7 @@ export function applyQuery(items: Item[], filters: Filters, sort: SortKey, asc: 
   const result = items.filter(({ movie, entry }) => {
     if (text && ![movie.titleUk, movie.titleEn, movie.originalTitle].some((title) => norm(title ?? '').includes(text)))
       return false
+    if (filters.tag && !entry.tags?.includes(filters.tag)) return false
     if (filters.genre && ![...movie.genres, ...(movie.genresEn ?? [])].includes(filters.genre)) return false
     if (person && ![...movie.directors, ...movie.cast.map((c) => c.name)].some((name) => norm(name).includes(person)))
       return false

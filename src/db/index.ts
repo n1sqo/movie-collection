@@ -32,6 +32,8 @@ export interface Entry {
   watchedAt?: string
   /** Dates of later re-watches, oldest first. Absent in older data and backups. */
   rewatches?: string[]
+  /** The user's own lists, e.g. «з дружиною». */
+  tags?: string[]
   note?: string
   addedAt: string
   updatedAt: string

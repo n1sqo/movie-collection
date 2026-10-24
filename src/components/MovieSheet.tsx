@@ -20,6 +20,7 @@ import { useLiveQuery } from '../useLiveQuery'
 import { usePosterUrl } from '../usePosterUrl'
 import { RatingPicker } from './RatingPicker'
 import { Trailer } from './Trailer'
+import { TagEditor } from './Tags'
 
 export interface SheetPreview {
   titleUk: string
@@ -168,6 +169,7 @@ function MovieSheet({ id, preview, onClose }: { id: number; preview?: SheetPrevi
             </div>
 
             {movie && entry !== undefined && <EntryEditor movie={movie} entry={entry} />}
+            {entry && <TagEditor entry={entry} />}
 
             {!movie && !error && <div class="spinner" aria-busy="true" />}
             {error && !movie && <p class="notice error">{error}</p>}

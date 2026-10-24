@@ -349,3 +349,50 @@ test('my year in movies: recap and a shareable picture', async ({ page }) => {
   await page.getByRole('button', { name: 'Назад до «Я»' }).click()
   await expect(page.locator('.hours-card')).toBeVisible()
 })
+
+test('lists: tag movies in the sheet and filter by a list', async ({ page }) => {
+  await search(page, 'film')
+  for (const n of [0, 1, 2]) {
+    await page.locator('.result').nth(n).click()
+    await page.getByRole('button', { name: 'Бачив', exact: true }).click()
+    await page.locator('.rating-picker button', { hasText: /^8$/ }).click()
+    if (n < 2) {
+      if (n === 0) {
+        await page.getByRole('button', { name: '+ Новий список' }).click()
+        await page.getByRole('textbox', { name: 'Новий список' }).fill('з дружиною')
+        await page.keyboard.press('Enter')
+      } else {
+        await page.locator('.tag-editor').getByRole('button', { name: 'з дружиною' }).click()
+      }
+      await expect(page.locator('.tag-editor .tag-chip.on')).toHaveText('з дружиною')
+    }
+    await closeSheet(page)
+  }
+  // A movie in the watchlist can be on a list too.
+  await page.locator('.result').nth(3).locator('.add-btn').click()
+  await page.locator('.result').nth(3).click()
+  await page.locator('.tag-editor').getByRole('button', { name: 'з дружиною' }).click()
+  await closeSheet(page)
+
+  await goTo(page, 'Колекція')
+  await expect(page.locator('.poster-tile')).toHaveCount(3)
+  await page.locator('.chip-row').getByRole('button', { name: 'з дружиною' }).click()
+  await expect(page.locator('.poster-tile')).toHaveCount(2)
+  await page.getByRole('tab', { name: /Подивитись/ }).click()
+  await expect(page.locator('.watch-row')).toHaveCount(1)
+
+  // Taking the last movie off the list removes the list and its filter.
+  await page.getByRole('tab', { name: /Бачив/ }).click()
+  for (const name of ['Фільм 1', 'Фільм 2']) {
+    await page.getByRole('button', { name, exact: true }).click()
+    await page.locator('.tag-editor').getByRole('button', { name: 'з дружиною' }).click()
+    await closeSheet(page)
+  }
+  await page.getByRole('tab', { name: /Подивитись/ }).click()
+  await page.locator('.watch-row').first().locator('.watch-main').click()
+  await page.locator('.tag-editor').getByRole('button', { name: 'з дружиною' }).click()
+  await closeSheet(page)
+  await page.getByRole('tab', { name: /Бачив/ }).click()
+  await expect(page.locator('.chip-row').getByRole('button', { name: 'з дружиною' })).toHaveCount(0)
+  await expect(page.locator('.poster-tile')).toHaveCount(3)
+})
