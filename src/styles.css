@@ -1819,3 +1819,19 @@ body.sheet-open {
 .screen-header + .segmented.big {
   margin-top: 0;
 }
+.btn.big {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 10px;
+  font-size: 16px;
+  line-height: 1;
+  white-space: nowrap;
+}
+/* Anchored from the top of the dynamic viewport: iOS can leave a fixed bottom:0 bar
+   floating above the screen edge on pages shorter than the screen. */
+.tabbar {
+  bottom: auto;
+  top: calc(100dvh - 62px - max(16px, env(safe-area-inset-bottom)));
+}
