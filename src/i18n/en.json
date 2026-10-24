@@ -231,7 +231,16 @@
     "views": {
       "one": "{n} view",
       "other": "{n} views"
-    }
+    },
+    "hoursUnit": "hours of movies",
+    "hoursTitle": "Across all views",
+    "hoursThisYear": "{n} h of them this year",
+    "daysNonStop": {
+      "one": "That's {n} day non-stop",
+      "other": "That's {n} days non-stop"
+    },
+    "directors": "Favourite directors",
+    "actors": "Favourite actors"
   },
   "update": {
     "available": "A new version is available",

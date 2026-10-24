@@ -204,6 +204,11 @@ test('Me: rating histogram and favourite genres', async ({ page }) => {
   await expect(ratings.locator('.bar.top')).toHaveCount(1)
   await expect(ratings.locator('.bar-col').nth(7)).toContainText('2')
   await expect(page.locator('.card', { hasText: 'Улюблені жанри' })).toContainText('Драма')
+  await expect(page.locator('.hours-card')).toContainText('4год у кіно')
+  await expect(page.locator('.hours-card')).toContainText('З них 4 год цього року')
+  const directors = page.locator('.card', { hasText: 'Улюблені режисери' })
+  await expect(directors.locator('li')).toHaveText(['Director2 фільми8,0'])
+  await expect(page.locator('.card', { hasText: 'Улюблені актори' })).toContainText('Actor')
 })
 
 test('re-watches: add with undo, remove, counted by month and year', async ({ page }) => {
@@ -230,6 +235,8 @@ test('re-watches: add with undo, remove, counted by month and year', async ({ pa
   await expect(months.locator('.bar-col').last()).toContainText('3')
   const year = String(new Date().getFullYear())
   await expect(page.locator('.card', { hasText: 'По роках' })).toContainText(`${year}3 перегляди`)
+  // Every view counts towards the hours: 3 × 2 h.
+  await expect(page.locator('.hours-card')).toContainText('6год у кіно')
 
   // Removing a re-watch from the edit panel updates the stats.
   await goTo(page, 'Колекція')

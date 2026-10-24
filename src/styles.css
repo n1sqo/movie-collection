@@ -1900,3 +1900,68 @@ body.sheet-open {
   margin-left: 4px;
   color: var(--secondary);
 }
+
+/* Hours in movies and favourite people */
+.hours-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.hours-big {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+}
+.hours-big b {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.hours-big span {
+  font-size: 13px;
+  color: var(--secondary);
+}
+.hours-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.hours-text .muted {
+  font-size: 13px;
+  font-weight: 400;
+}
+.people {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.people li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 15px;
+}
+.people li + li {
+  border-top: 1px solid var(--surface-2);
+}
+.people-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.people .muted {
+  font-size: 13px;
+}
+.people-avg {
+  min-width: 28px;
+  text-align: right;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}

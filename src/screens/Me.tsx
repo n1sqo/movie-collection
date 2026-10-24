@@ -1,10 +1,12 @@
 import { lang, t, tn } from '../i18n'
-import { db } from '../db'
+import { db, type Entry, type Movie } from '../db'
 import { useLiveQuery } from '../useLiveQuery'
 import { Screen } from '../components/Screen'
 import { displayGenres } from '../data/query'
 import { formatAvg } from './Collection'
 import { viewDates } from '../data/collection'
+
+type Item = { entry: Entry; movie: Movie }
 
 async function loadWatched() {
   const entries = await db.entries.where('status').equals('watched').toArray()
@@ -60,6 +62,8 @@ function MyStats() {
         </div>
       </div>
 
+      <HoursCard items={items} year={year} />
+
       {rated > 0 && (
         <section class="card">
           <div class="card-head">
@@ -106,6 +110,9 @@ function MyStats() {
           ))}
         </section>
       )}
+
+      <TopPeople title={t('stats.directors')} items={items} names={(m) => m.directors} />
+      <TopPeople title={t('stats.actors')} items={items} names={(m) => m.cast.slice(0, 5).map((c) => c.name)} />
     </>
   )
 }
@@ -175,6 +182,69 @@ function ViewsByYear({ views }: { views: string[] }) {
           </div>
         </div>
       ))}
+    </section>
+  )
+}
+
+/** Total runtime of every view, re-watches included. */
+function HoursCard({ items, year }: { items: Item[]; year: string }) {
+  let minutes = 0
+  let minutesThisYear = 0
+  for (const { entry, movie } of items) {
+    const dates = viewDates(entry)
+    // A movie marked watched without a date still counts once.
+    minutes += movie.runtime * Math.max(1, dates.length)
+    minutesThisYear += movie.runtime * dates.filter((d) => d.startsWith(year)).length
+  }
+  const hours = Math.round(minutes / 60)
+  if (hours === 0) return null
+  const days = Math.floor(minutes / 60 / 24)
+  return (
+    <section class="card hours-card">
+      <div class="hours-big">
+        <b>{hours.toLocaleString(lang.value === 'uk' ? 'uk-UA' : 'en-US')}</b>
+        <span>{t('stats.hoursUnit')}</span>
+      </div>
+      <div class="hours-text">
+        <div>{days > 0 ? tn('stats.daysNonStop', days) : t('stats.hoursTitle')}</div>
+        {minutesThisYear > 0 && (
+          <div class="muted">{t('stats.hoursThisYear').replace('{n}', String(Math.round(minutesThisYear / 60)))}</div>
+        )}
+      </div>
+    </section>
+  )
+}
+
+/** People in at least two of the watched movies, most frequent first. */
+function TopPeople({ title, items, names }: { title: string; items: Item[]; names: (m: Movie) => string[] }) {
+  const people = new Map<string, { count: number; ratings: number[] }>()
+  for (const { entry, movie } of items)
+    for (const name of new Set(names(movie))) {
+      const p = people.get(name) ?? { count: 0, ratings: [] }
+      p.count++
+      if (entry.myRating) p.ratings.push(entry.myRating)
+      people.set(name, p)
+    }
+  const avg = (r: number[]) => (r.length ? r.reduce((a, b) => a + b, 0) / r.length : 0)
+  const top = [...people.entries()]
+    .filter(([, p]) => p.count >= 2)
+    .sort((a, b) => b[1].count - a[1].count || avg(b[1].ratings) - avg(a[1].ratings))
+    .slice(0, 5)
+  if (top.length === 0) return null
+  return (
+    <section class="card">
+      <div class="card-head">
+        <h2>{title}</h2>
+      </div>
+      <ol class="people">
+        {top.map(([name, p]) => (
+          <li key={name}>
+            <span class="people-name">{name}</span>
+            <span class="muted">{tn('collection.count', p.count)}</span>
+            {p.ratings.length > 0 && <b class="people-avg">{formatAvg(avg(p.ratings))}</b>}
+          </li>
+        ))}
+      </ol>
     </section>
   )
 }
