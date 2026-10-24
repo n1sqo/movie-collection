@@ -71,7 +71,8 @@ export function applyQuery(items: Item[], filters: Filters, sort: SortKey, asc: 
       case 'year':
         return item.movie.releaseDate || (item.movie.year ? String(item.movie.year) : undefined)
       case 'watchedAt':
-        return item.entry.watchedAt
+        // The most recent view, so a re-watch moves the movie up.
+        return item.entry.rewatches?.at(-1) ?? item.entry.watchedAt
       case 'title':
         return displayTitle(item.movie, lang)
       case 'addedAt':

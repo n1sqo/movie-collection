@@ -1877,3 +1877,26 @@ body.sheet-open {
 .swipe-tip {
   margin: 12px 0 0;
 }
+
+/* Re-watches and views by month */
+.histogram.months,
+.histogram-axis.months {
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 4px;
+}
+.histogram-axis.months {
+  font-size: 10px;
+  text-transform: lowercase;
+}
+.rewatch-btn {
+  margin-top: 10px;
+  height: 44px;
+  border-radius: 22px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+}
+.rewatch-chip span {
+  margin-left: 4px;
+  color: var(--secondary);
+}

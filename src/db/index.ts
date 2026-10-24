@@ -28,7 +28,10 @@ export interface Entry {
   tmdbId: number
   status: 'watched' | 'watchlist'
   myRating?: number
+  /** First time watched. */
   watchedAt?: string
+  /** Dates of later re-watches, oldest first. Absent in older data and backups. */
+  rewatches?: string[]
   note?: string
   addedAt: string
   updatedAt: string

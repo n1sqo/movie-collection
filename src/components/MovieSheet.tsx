@@ -1,12 +1,14 @@
 import { signal } from '@preact/signals'
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { lang, t } from '../i18n'
+import { lang, t, tn } from '../i18n'
 import { tmdbToken } from '../settings'
 import { db, type Entry, type Movie } from '../db'
 import { getMovieDetails, TmdbError } from '../api/tmdb'
 import { displayGenres } from '../data/query'
 import {
+  addRewatch,
   moveToWatchlist,
+  removeRewatch,
   removeFromCollection,
   saveToCollection,
   today,
@@ -280,6 +282,11 @@ function EntryEditor({ movie, entry }: { movie: Movie; entry: Entry | null }) {
             <div class="summary-date">
               {entry.watchedAt ? `${t('movie.watchedOn')} ${formatDate(entry.watchedAt)}` : t('movie.watched')}
             </div>
+            {!!entry.rewatches?.length && (
+              <div class="summary-sub rewatch-count">
+                {tn('movie.rewatchCount', entry.rewatches.length)} · {formatDate(entry.rewatches.at(-1)!)}
+              </div>
+            )}
             {tmdb !== undefined && (
               <div class="summary-sub">
                 TMDB {tmdb.toLocaleString(lang.value === 'uk' ? 'uk-UA' : 'en-US', { maximumFractionDigits: 1 })}
@@ -293,6 +300,9 @@ function EntryEditor({ movie, entry }: { movie: Movie; entry: Entry | null }) {
             {t('movie.edit')}
           </button>
         </div>
+        <button class="btn wide rewatch-btn" onClick={() => rewatch(entry)}>
+          {t('movie.rewatch')}
+        </button>
         {entry.note && (
           <div class="note-card">
             <div class="entry-label">{t('movie.myNote')}</div>
@@ -304,6 +314,15 @@ function EntryEditor({ movie, entry }: { movie: Movie; entry: Entry | null }) {
   }
 
   return <RatePanel movie={movie} entry={entry} onDone={() => setEditing(false)} />
+}
+
+async function rewatch(entry: Entry) {
+  await addRewatch(entry)
+  const before = entry.rewatches
+  showToast(t('movie.rewatchAdded'), {
+    label: t('movie.undo'),
+    run: () => updateEntry(entry.tmdbId, { rewatches: before, watchedAt: entry.watchedAt })
+  })
 }
 
 /** Big number, ten large buttons, date in one tap, a note and «Готово». */
@@ -373,6 +392,24 @@ function RatePanel({ movie, entry, onDone }: { movie: Movie; entry: Entry | null
         </div>
       )}
 
+      {watched && !!entry?.rewatches?.length && (
+        <div class="rate-section">
+          <div class="entry-label">{t('movie.rewatches')}</div>
+          <div class="chip-row wrap">
+            {entry.rewatches.map((d, i) => (
+              <button
+                key={`${d}-${i}`}
+                class="chip rewatch-chip"
+                aria-label={`${t('movie.removeRewatch')} ${formatDate(d)}`}
+                onClick={() => removeRewatch(entry, i)}
+              >
+                {formatDate(d)} <span aria-hidden="true">×</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {watched && (
         <label class="entry-note">
           <span class="entry-label">{t('movie.note')}</span>
@@ -420,7 +457,8 @@ function formatDate(iso: string): string {
   return new Date(`${iso}T00:00:00`).toLocaleDateString(lang.value === 'uk' ? 'uk-UA' : 'en-GB', {
     day: 'numeric',
     month: 'long',
-    year: 'numeric'
+    // The current year goes without saying.
+    year: iso.startsWith(String(new Date().getFullYear())) ? undefined : 'numeric'
   })
 }
 

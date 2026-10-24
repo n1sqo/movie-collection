@@ -48,7 +48,23 @@ export async function updateEntry(tmdbId: number, patch: Partial<Entry>): Promis
 
 /** Moves a watched movie back to the watchlist, dropping its rating and watch date. */
 export async function moveToWatchlist(tmdbId: number): Promise<void> {
-  await updateEntry(tmdbId, { status: 'watchlist', myRating: undefined, watchedAt: undefined })
+  await updateEntry(tmdbId, { status: 'watchlist', myRating: undefined, watchedAt: undefined, rewatches: undefined })
+}
+
+/** Every date the movie was watched: the first view, then re-watches. */
+export function viewDates(entry: Pick<Entry, 'watchedAt' | 'rewatches'>): string[] {
+  return [...(entry.watchedAt ? [entry.watchedAt] : []), ...(entry.rewatches ?? [])]
+}
+
+export async function addRewatch(entry: Entry, date = today()): Promise<void> {
+  // A movie marked watched without a date gets this as its first view instead.
+  if (!entry.watchedAt) return updateEntry(entry.tmdbId, { watchedAt: date })
+  await updateEntry(entry.tmdbId, { rewatches: [...(entry.rewatches ?? []), date].sort() })
+}
+
+export async function removeRewatch(entry: Entry, index: number): Promise<void> {
+  const rewatches = (entry.rewatches ?? []).filter((_, i) => i !== index)
+  await updateEntry(entry.tmdbId, { rewatches: rewatches.length ? rewatches : undefined })
 }
 
 export interface Removed {

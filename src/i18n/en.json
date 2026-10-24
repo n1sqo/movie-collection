@@ -112,6 +112,14 @@
       "8": "Very good",
       "9": "Great",
       "10": "Masterpiece"
+    },
+    "rewatch": "Watched again",
+    "rewatchAdded": "Re-watch added",
+    "rewatches": "Re-watches",
+    "removeRewatch": "Remove view",
+    "rewatchCount": {
+      "one": "{n} more time",
+      "other": "{n} more times"
     }
   },
   "collection": {
@@ -217,7 +225,13 @@
     "thisYear": "this year",
     "ratings": "My ratings",
     "ratingsAria": "Rating distribution, most common {n}",
-    "empty": "Stats appear here once you mark your first movie as Watched."
+    "empty": "Stats appear here once you mark your first movie as Watched.",
+    "byMonth": "Views by month",
+    "byYear": "By year",
+    "views": {
+      "one": "{n} view",
+      "other": "{n} views"
+    }
   },
   "update": {
     "available": "A new version is available",

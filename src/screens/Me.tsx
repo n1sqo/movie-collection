@@ -4,6 +4,7 @@ import { useLiveQuery } from '../useLiveQuery'
 import { Screen } from '../components/Screen'
 import { displayGenres } from '../data/query'
 import { formatAvg } from './Collection'
+import { viewDates } from '../data/collection'
 
 async function loadWatched() {
   const entries = await db.entries.where('status').equals('watched').toArray()
@@ -27,7 +28,8 @@ function MyStats() {
   const ratedItems = items.filter((i) => i.entry.myRating !== undefined)
   const avg = ratedItems.length ? ratedItems.reduce((s, i) => s + i.entry.myRating!, 0) / ratedItems.length : undefined
   const year = String(new Date().getFullYear())
-  const watchedThisYear = items.filter((i) => i.entry.watchedAt?.startsWith(year)).length
+  const views = items.flatMap((i) => viewDates(i.entry))
+  const watchedThisYear = items.filter((i) => viewDates(i.entry).some((d) => d.startsWith(year))).length
 
   const counts = Array.from({ length: 10 }, () => 0)
   for (const { entry } of items) if (entry.myRating) counts[entry.myRating - 1]++
@@ -83,6 +85,9 @@ function MyStats() {
         </section>
       )}
 
+      <ViewsByMonth views={views} />
+      <ViewsByYear views={views} />
+
       {genres.length > 0 && (
         <section class="card">
           <div class="card-head">
@@ -102,5 +107,74 @@ function MyStats() {
         </section>
       )}
     </>
+  )
+}
+
+/** Last 12 months, oldest first, as YYYY-MM. */
+function lastMonths(now = new Date()): string[] {
+  return Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  })
+}
+
+function ViewsByMonth({ views }: { views: string[] }) {
+  const months = lastMonths()
+  const counts = months.map((m) => views.filter((d) => d.startsWith(m)).length)
+  const total = counts.reduce((a, b) => a + b, 0)
+  if (total === 0) return null
+  const max = Math.max(...counts)
+  const locale = lang.value === 'uk' ? 'uk-UA' : 'en-US'
+  const label = (m: string) =>
+    new Date(`${m}-01T00:00:00`).toLocaleDateString(locale, { month: 'short' }).replace('.', '').slice(0, 3)
+  return (
+    <section class="card">
+      <div class="card-head">
+        <h2>{t('stats.byMonth')}</h2>
+        <span>{tn('stats.views', total)}</span>
+      </div>
+      <div class="histogram months" role="img" aria-label={months.map((m, i) => `${label(m)} ${counts[i]}`).join(', ')}>
+        {counts.map((c, i) => (
+          <div key={months[i]} class="bar-col">
+            <span class="bar-value">{c || ''}</span>
+            <div
+              class={c === max ? 'bar top' : 'bar'}
+              style={{ height: `${Math.max(c ? 6 : 2, Math.round((c / max) * 100))}%` }}
+            />
+          </div>
+        ))}
+      </div>
+      <div class="histogram-axis months" aria-hidden="true">
+        {months.map((m) => (
+          <span key={m}>{label(m)}</span>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function ViewsByYear({ views }: { views: string[] }) {
+  const byYear = new Map<string, number>()
+  for (const d of views) byYear.set(d.slice(0, 4), (byYear.get(d.slice(0, 4)) ?? 0) + 1)
+  const years = [...byYear.entries()].sort((a, b) => b[0].localeCompare(a[0]))
+  if (years.length === 0) return null
+  const max = Math.max(...years.map(([, n]) => n))
+  return (
+    <section class="card">
+      <div class="card-head">
+        <h2>{t('stats.byYear')}</h2>
+      </div>
+      {years.map(([y, n]) => (
+        <div key={y} class="meter">
+          <div class="meter-label">
+            <span>{y}</span>
+            <span class="muted">{tn('stats.views', n)}</span>
+          </div>
+          <div class="meter-track">
+            <div class="meter-fill" style={{ width: `${Math.round((n / max) * 100)}%` }} />
+          </div>
+        </div>
+      ))}
+    </section>
   )
 }

@@ -200,9 +200,47 @@ test('Me: rating histogram and favourite genres', async ({ page }) => {
   await goTo(page, 'Я')
   await expect(page.locator('.stat-tile').first()).toContainText('2')
   await expect(page.locator('.stat-tile').nth(1)).toContainText('8,0')
-  await expect(page.locator('.bar.top')).toHaveCount(1)
-  await expect(page.locator('.bar-col').nth(7)).toContainText('2')
-  await expect(page.locator('.meter')).toContainText('Драма')
+  const ratings = page.locator('.card', { hasText: 'Мої оцінки' })
+  await expect(ratings.locator('.bar.top')).toHaveCount(1)
+  await expect(ratings.locator('.bar-col').nth(7)).toContainText('2')
+  await expect(page.locator('.card', { hasText: 'Улюблені жанри' })).toContainText('Драма')
+})
+
+test('re-watches: add with undo, remove, counted by month and year', async ({ page }) => {
+  await search(page, 'film')
+  await page.locator('.result').first().click()
+  await page.getByRole('button', { name: 'Бачив', exact: true }).click()
+  await page.locator('.rating-picker button', { hasText: /^9$/ }).click()
+  await page.getByRole('button', { name: 'Готово' }).click()
+
+  await page.getByRole('button', { name: 'Переглянув ще раз' }).click()
+  await expect(page.locator('.rewatch-count')).toContainText('Ще 1 раз')
+  await page.getByRole('button', { name: 'Скасувати' }).click()
+  await expect(page.locator('.rewatch-count')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Переглянув ще раз' }).click()
+  await page.getByRole('button', { name: 'Переглянув ще раз' }).click()
+  await expect(page.locator('.rewatch-count')).toContainText('Ще 2 рази')
+  await closeSheet(page)
+
+  await goTo(page, 'Я')
+  const months = page.locator('.card', { hasText: 'Перегляди по місяцях' })
+  await expect(months).toContainText('3 перегляди')
+  await expect(months.locator('.bar-col')).toHaveCount(12)
+  await expect(months.locator('.bar-col').last()).toContainText('3')
+  const year = String(new Date().getFullYear())
+  await expect(page.locator('.card', { hasText: 'По роках' })).toContainText(`${year}3 перегляди`)
+
+  // Removing a re-watch from the edit panel updates the stats.
+  await goTo(page, 'Колекція')
+  await page.getByRole('button', { name: 'Фільм 1', exact: true }).click()
+  await page.getByRole('button', { name: 'Змінити' }).click()
+  await page.locator('.rewatch-chip').first().click()
+  await expect(page.locator('.rewatch-chip')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Готово' }).click()
+  await closeSheet(page)
+  await goTo(page, 'Я')
+  await expect(months).toContainText('2 перегляди')
 })
 
 test('bottom bar sits at the same place on every tab, short pages included', async ({ page }) => {
