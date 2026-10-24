@@ -178,6 +178,25 @@ test('Me: rating histogram and favourite genres', async ({ page }) => {
   await expect(page.locator('.meter')).toContainText('Драма')
 })
 
+test('bottom bar sits at the same place on every tab, short pages included', async ({ page }) => {
+  // «Я» with no movies is the shortest page; it is where the bar floated up on iPhone.
+  // Chromium has no notch, so stand in the iPhone 14 Pro status-bar inset.
+  await page.addStyleTag({ content: ':root { --top-inset: 59px }' })
+  const offsets: number[] = []
+  for (const section of ['Я', 'Колекція', 'Опції'] as const) {
+    await goTo(page, section)
+    const bar = await page.locator('.tabbar').boundingBox()
+    const viewport = page.viewportSize()!
+    offsets.push(Math.round(viewport.height - (bar!.y + bar!.height)))
+    // iOS only pins fixed elements to the real screen bottom when the page is at least screen-high.
+    const tall = await page.evaluate(() => document.documentElement.scrollHeight >= window.innerHeight + 59)
+    expect(tall, `${section} page shorter than screen + status bar`).toBe(true)
+  }
+  expect(new Set(offsets).size, `bar offsets ${offsets.join(', ')}`).toBe(1)
+  expect(offsets[0]).toBeGreaterThanOrEqual(16)
+  expect(offsets[0]).toBeLessThanOrEqual(40)
+})
+
 test('English interface', async ({ page }) => {
   await goTo(page, 'Опції')
   await page.getByRole('button', { name: 'English' }).click()

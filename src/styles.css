@@ -1829,9 +1829,12 @@ body.sheet-open {
   line-height: 1;
   white-space: nowrap;
 }
-/* Anchored from the top of the dynamic viewport: iOS can leave a fixed bottom:0 bar
-   floating above the screen edge on pages shorter than the screen. */
-.tabbar {
-  bottom: auto;
-  top: calc(100dvh - 62px - max(16px, env(safe-area-inset-bottom)));
+/* iOS standalone with a translucent status bar: on a page that doesn't scroll, the viewport
+   for fixed elements is short by the top inset, so a bottom:0 bar floats ~59px up (seen on «Я»).
+   Making every page at least screen-high plus that inset keeps the bar at the real bottom. */
+:root {
+  --top-inset: env(safe-area-inset-top);
+}
+.app {
+  min-height: calc(100vh + var(--top-inset));
 }
